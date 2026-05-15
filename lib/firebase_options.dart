@@ -17,29 +17,20 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -53,10 +44,40 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDyjtR3_rBR3tTAmNIVyRwA3yU1eYLqQvQ',
-    appId: '1:720938016016:android:f7c8f6794a627dc936d995',
-    messagingSenderId: '720938016016',
-    projectId: 'maidbookingapp-bfb87',
-    storageBucket: 'maidbookingapp-bfb87.firebasestorage.app',
+    apiKey: 'AIzaSyCATCHJiNUri02ldZL0MaNACQ82ddWu6_Q',
+    appId: '1:175571916693:android:50793d065eaf664caa489c',
+    messagingSenderId: '175571916693',
+    projectId: 'timebachaodev',
+    storageBucket: 'timebachaodev.firebasestorage.app',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAvdG7yPM_KMxqnpSRHa-Fhfpwj0ArsNHo',
+    appId: '1:175571916693:web:e2b6df8a8469d9a8aa489c',
+    messagingSenderId: '175571916693',
+    projectId: 'timebachaodev',
+    authDomain: 'timebachaodev.firebaseapp.com',
+    storageBucket: 'timebachaodev.firebasestorage.app',
+    measurementId: 'G-N18K4TX69B',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyAt_f-Bhx0NPh6aOlxf9jGHpFhGHE_6G8Q',
+    appId: '1:175571916693:ios:d884c0f91666ee37aa489c',
+    messagingSenderId: '175571916693',
+    projectId: 'timebachaodev',
+    storageBucket: 'timebachaodev.firebasestorage.app',
+    iosBundleId: 'com',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyAvdG7yPM_KMxqnpSRHa-Fhfpwj0ArsNHo',
+    appId: '1:175571916693:web:189da83fd33cdbb5aa489c',
+    messagingSenderId: '175571916693',
+    projectId: 'timebachaodev',
+    authDomain: 'timebachaodev.firebaseapp.com',
+    storageBucket: 'timebachaodev.firebasestorage.app',
+    measurementId: 'G-LBSS3DVZ4D',
+  );
+
 }

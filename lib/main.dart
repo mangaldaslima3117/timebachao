@@ -182,7 +182,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      title: 'Maid Booking App',
+      title: 'Time Bachao',
       theme: ThemeData(primarySwatch: Colors.teal),
       //home: const AppInitializer(),
       home: authState.when(
@@ -298,7 +298,7 @@ class _CustomerAppState extends ConsumerState<CustomerApp> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Maid Booking App',
+      title: 'Time Bachao',
       theme: ThemeData(primarySwatch: Colors.teal),
       //home: const AppInitializer(),
       home: authState.when(
