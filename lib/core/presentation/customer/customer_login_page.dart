@@ -126,13 +126,13 @@ class _CustomerLoginPageState extends ConsumerState<CustomerLoginPage> {
                   ),
                   // App Logo
                   Image.asset(
-                    'assets/images/Jhadu poocha.png', // Place your generated logo here
+                    'assets/images/Time Bachao.png', // Place your generated logo here
                     height: 180,
                   ),
                   const SizedBox(height: 1),
                   // App Name
                   Text(
-                    'Jhadu Poocha',
+                    'Time Bachao',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,

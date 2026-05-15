@@ -1,5 +1,5 @@
 name: bookmyservice
-description: Jhadu Poocha is a Maid Service Booking App.
+description: Time Bachao is a Maid Service Booking App.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -93,7 +93,7 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/Jhadu poocha.png"
+  image_path: "assets/icon/Time Bachao.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

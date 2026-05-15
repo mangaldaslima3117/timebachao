@@ -41,7 +41,7 @@ class PaymentService {
       'key': paymentKey,
       'amount':
           booking.totalPrice * 100, //Multiply with 100 to make this as number
-      'name': 'Jhadu Pocha',
+      'name': 'Time Bachao',
       'description': 'Booking Amount : ${booking.totalPrice}',
       'prefill': {
         'contact': booking.customerInfo.phone,

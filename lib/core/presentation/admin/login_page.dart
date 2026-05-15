@@ -21,13 +21,13 @@ class LoginPage extends ConsumerWidget {
               children: [
                 // App Logo
                 Image.asset(
-                  'assets/images/Jhadu poocha.png', // Place your generated logo here
+                  'assets/images/Time Bachao.png', // Place your generated logo here
                   height: 200,
                 ),
                 const SizedBox(height: 16),
                 // App Name
                 Text(
-                  'Jhadu Poocha',
+                  'Time Bachao',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,

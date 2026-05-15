@@ -90,7 +90,7 @@ class AboutPage extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    'Jhadu Poocha App',
+                    'Time Bachao App',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w500,

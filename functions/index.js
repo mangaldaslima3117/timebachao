@@ -331,7 +331,7 @@ Our service provider will reach you as scheduled on or before ${bookingData["tim
 
 Thank you for choosing us!
 
-— Team Jhadu Pocha`;
+— Team Time Bachao`;
             break;
         case "6":
             subject = "Payment Successful";
@@ -342,9 +342,9 @@ Your service (Booking ID: ${bookingData["bookingId"]}) has been successfully com
 Total Paid: ₹${bookingData["paymentInfo"]["amount"]}  
 Payment Mode: ${bookingData["paymentInfo"]["method"]}
 
-We hope you had a great experience. Thank you for using Jhadu Pocha App!
+We hope you had a great experience. Thank you for using Time Bachao App!
 
-— Team Jhadu Pocha`;
+— Team Time Bachao`;
             break;
         default:
             return;

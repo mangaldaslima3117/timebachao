@@ -69,7 +69,7 @@ class MaidProfilePage extends ConsumerWidget {
           //       mainAxisAlignment: MainAxisAlignment.center,
           //       children: [
           //         Text(
-          //           "Welcome to Jhadu Poocha App !",
+          //           "Welcome to Time Bachao App !",
           //           style: TextStyle(
           //             fontSize: 20,
           //             fontWeight: FontWeight.bold,
