@@ -1,4 +1,4 @@
-package com.winiman.timebachao.bookingservice.customer
+package com.winiman.timebachao.bookingservice.partner
 
 import io.flutter.embedding.android.FlutterActivity
 

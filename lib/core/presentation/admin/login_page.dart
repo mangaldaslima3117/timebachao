@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/authentication_provider.dart';
 import '../maid/maid_login_page.dart';
 
-class LoginPage extends ConsumerWidget {
+class LoginPage extends ConsumerStatefulWidget {  // ✅ Changed
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginPage> createState() => _LoginPageState();  // ✅ Added
+}
+
+class _LoginPageState extends ConsumerState<LoginPage> {  // ✅ Added
+  @override
+  Widget build(BuildContext context) {  // ✅ No WidgetRef param needed — use ref directly
     final authService = ref.watch(authServiceProvider);
 
     return Scaffold(
@@ -19,13 +24,11 @@ class LoginPage extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App Logo
                 Image.asset(
-                  'assets/images/Time Bachao.png', // Place your generated logo here
+                  'assets/images/Time Bachao.png',
                   height: 200,
                 ),
                 const SizedBox(height: 16),
-                // App Name
                 Text(
                   'Time Bachao',
                   style: TextStyle(
@@ -36,35 +39,27 @@ class LoginPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // Google Sign-In Button
-                // ElevatedButton.icon(
-                //   icon: const Icon(Icons.login),
-                //   label: const Text("Sign in with Google"),
-                //   style: ElevatedButton.styleFrom(
-                //     backgroundColor: Colors.teal,
-                //     foregroundColor: Colors.white,
-                //     minimumSize: const Size.fromHeight(50),
-                //     shape: RoundedRectangleBorder(
-                //       borderRadius: BorderRadius.circular(10),
-                //     ),
-                //   ),
-                //   onPressed: () async {
-                //     final result = await authService.signInWithGoogle();
-                //     if (result == null) {
-                //       ScaffoldMessenger.of(context).showSnackBar(
-                //         const SnackBar(
-                //             content: Text("Login failed or cancelled")),
-                //       );
-                //     }
-                //   },
-                // ),
+                // Google Sign-In Button (Admin)
                 GestureDetector(
                   onTap: () async {
-                    final result = await authService.signInWithGoogle();
-                    if (result == null) {
+                    try {
+                      final result = await authService.signInWithGoogle();
+
+                      if (!mounted) return; // ✅ Now works correctly
+
+                      if (result == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Login failed or cancelled")),
+                        );
+                      } else {
+                        Navigator.pushReplacementNamed(context, '/home');
+                      }
+                    } catch (e) {
+                      if (!mounted) return; // ✅ Now works correctly
+
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Login failed or cancelled")),
+                        SnackBar(content: Text("Error: $e")),
                       );
                     }
                   },
@@ -122,9 +117,7 @@ class LoginPage extends ConsumerWidget {
 
                 // Login as Customer
                 OutlinedButton(
-                  onPressed: () {
-                    // Functionality to be implemented
-                  },
+                  onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                     side: const BorderSide(color: Colors.teal),

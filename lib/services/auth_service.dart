@@ -3,9 +3,9 @@ import 'package:bookmyservice/models/role_model.dart';
 import 'package:bookmyservice/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/customer_model.dart';
 
 class AuthService {
@@ -14,285 +14,179 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const _roleType = 'roleType';
 
+  // Max retries for Firestore writes
+  static const int _maxRetries = 3;
+
   AuthService(this._auth, this._googleSignIn);
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Sign in with Google and create user in Firestore
+  /// Retries a Firestore operation with exponential backoff
+  Future<T> _withRetry<T>(Future<T> Function() operation) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await operation();
+      } on FirebaseException catch (e) {
+        attempt++;
+        debugPrint(
+            'Firestore attempt $attempt failed: ${e.code} - ${e.message}');
+        if (attempt >= _maxRetries || e.code != 'unavailable') {
+          rethrow; // Don't retry non-transient errors
+        }
+        // Exponential backoff: 1s, 2s, 4s
+        await Future.delayed(Duration(seconds: 1 << (attempt - 1)));
+      }
+    }
+  }
+
   Future<User?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null;
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return null; // User cancelled
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
 
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    final userCredential = await _auth.signInWithCredential(credential);
+    final user = userCredential.user;
+
+    if (user == null) throw Exception('Firebase Auth returned null user');
+
+    // Check if user already exists in Firestore
+    final existingUser =
+        await _firestore.collection('users').doc(user.uid).get();
+
+    if (!existingUser.exists) {
+      final role = RoleModel(
+        canRead: true,
+        canWrite: true,
+        isSuperAdmin: false,
+        roleType: 'Admin',
       );
 
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
+      final userModel = UserModel(
+        id: user.uid,
+        name: user.displayName ?? '',
+        email: user.email ?? '',
+        phone: '',
+        userId: user.uid,
+        gender: '',
+        address: '',
+        supportPhone: '',
+        appAccountId: '',
+        role: role,
+        photoUrl: user.photoURL ?? '',
+        fcmToken: '',
+      );
 
-      if (user != null) {
-        // 1. Save to `users` collection if not exists
-        final existingUser =
-            await _firestore.collection('users').doc(user.uid).get();
+      debugPrint("Firebase user: ${FirebaseAuth.instance.currentUser?.uid}");
+      await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
 
-        if (!existingUser.exists) {
-          RoleModel role = RoleModel(
-            canRead: false,
-            canWrite: false,
-            isSuperAdmin: false,
-            roleType: 'Admin',
-          ); // Default role
-          UserModel userModel = UserModel(
-            id: user.uid,
-            name: user.displayName!,
-            email: user.email!,
-            phone: '',
-            userId: user.uid,
-            gender: '',
-            address: '',
-            supportPhone: '',
-            appAccountId: '',
-            role: role,
-            photoUrl: user.photoURL!,
-            fcmToken: '',
-          );
-          await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .set(userModel.toMap());
-          // await _firestore.collection('users').doc(user.uid).set({
-          //   'email': user.email,
-          //   'name': user.displayName,
-          //   'photoUrl': user.photoURL,
-          //   'createdAt': FieldValue.serverTimestamp(),
-          // });
-        }
-
-        // Store maid ID in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_roleType, 'admin'); // Store role type
-      }
-
-      return user;
-    } catch (e) {
-      print('Error during Google Sign-in: $e');
-      return null;
+      debugPrint('Admin user created: ${user.uid}');
+    } else {
+      debugPrint('Admin user already exists: ${user.uid}');
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleType, 'admin');
+
+    return user;
   }
 
-  // Sign in with Google and create user in Firestore
   Future<User?> signInWithGoogle_Customer() async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null;
+    // Use injected _googleSignIn, not a new GoogleSignIn() instance
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return null;
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
 
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    final userCredential = await _auth.signInWithCredential(credential);
+    final user = userCredential.user;
+
+    if (user == null) throw Exception('Firebase Auth returned null user');
+
+    final existingCustomer = await _withRetry(
+      () => _firestore.collection('customers').doc(user.uid).get(),
+    );
+
+    if (!existingCustomer.exists) {
+      final customerModel = CustomerModel(
+        id: user.uid,
+        name: user.displayName ?? '',
+        email: user.email ?? '',
+        phone: '',
+        userId: user.uid,
+        gender: '',
+        address: AddressModel.getDefaultAddress(),
+        appAccountId: '',
+        profileImageUrl: user.photoURL ?? '',
+        fcmToken: '',
       );
 
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        // 1. Save to `users` collection if not exists
-        final existingUser =
-            await _firestore.collection('customers').doc(user.uid).get();
-
-        if (!existingUser.exists) {
-          // Default role
-          // CustomerModel userModel = CustomerModel(
-          //   id: user.uid,
-          //   name: user.displayName!,
-          //   email: user.email!,
-          //   phone: '',
-          //   userId: user.uid,
-          //   gender: '',
-          //   address: AddressModel.getDefaultAddress(),
-          //   appAccountId: '',
-          // );
-
-          // await _firestore
-          //     .collection('customers')
-          //     .doc(user.uid)
-          //     .set(userModel.toMap());
-          // await _firestore.collection('users').doc(user.uid).set({
-          //   'email': user.email,
-          //   'name': user.displayName,
-          //   'photoUrl': user.photoURL,
-          //   'createdAt': FieldValue.serverTimestamp(),
-          // });
-        }
-
-        // Store maid ID in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_roleType, 'customer'); // Store role type
-      }
-
-      return user;
-    } catch (e) {
-      print('Error during Google Sign-in: $e');
-      return null;
+      await _withRetry(
+        () => _firestore
+            .collection('customers')
+            .doc(user.uid)
+            .set(customerModel.toMap()),
+      );
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleType, 'customer');
+
+    return user;
   }
 
-  // Sign in with Google and create customer account in Firestore
   Future<User?> createCustomerAccount(
-      UserCredential? credential, String phone) async {
-    try {
-      final user = credential!.user;
+      UserCredential credential, String phone) async {
+    final user = credential.user;
+    if (user == null) throw Exception('Credential has no user');
 
-      if (user != null) {
-        // 1. Save to `users` collection if not exists
-        final existingUser =
-            await _firestore.collection('customers').doc(phone).get();
+    final existingCustomer = await _withRetry(
+      () => _firestore.collection('customers').doc(phone).get(),
+    );
 
-        if (!existingUser.exists) {
-          // Default role
-          CustomerModel userModel = CustomerModel(
-              id: user.uid,
-              name: user.displayName!,
-              email: user.email!,
-              phone: phone,
-              userId: user.uid,
-              gender: '',
-              address: AddressModel.getDefaultAddress(),
-              appAccountId: '',
-              profileImageUrl: user.photoURL ?? '',
-              fcmToken: '');
+    if (!existingCustomer.exists) {
+      final customerModel = CustomerModel(
+        id: user.uid,
+        name: user.displayName ?? '',
+        email: user.email ?? '',
+        phone: phone,
+        userId: user.uid,
+        gender: '',
+        address: AddressModel.getDefaultAddress(),
+        appAccountId: '',
+        profileImageUrl: user.photoURL ?? '',
+        fcmToken: '',
+      );
 
-          await _firestore
-              .collection('customers')
-              .doc(phone)
-              .set(userModel.toMap());
-        }
-
-        // Store maid ID in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_roleType, 'customer'); // Store role type
-      }
-
-      return user;
-    } catch (e) {
-      print('Error during Google Sign-in: $e');
-      return null;
+      await _withRetry(
+        () => _firestore
+            .collection('customers')
+            .doc(phone)
+            .set(customerModel.toMap()),
+      );
     }
-  }
 
-  Future<User?> getCustomerDetails(
-      UserCredential? credential, String phone) async {
-    try {
-      final user = credential!.user;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_roleType, 'customer');
 
-      if (user != null) {
-        // 1. Save to `users` collection if not exists
-        final existingUser =
-            await _firestore.collection('customers').doc(phone).get();
-
-        if (!existingUser.exists) {
-          // Default role
-          CustomerModel userModel = CustomerModel(
-            id: user.uid,
-            name: user.displayName!,
-            email: user.email!,
-            phone: phone,
-            userId: user.uid,
-            gender: '',
-            address: AddressModel.getDefaultAddress(),
-            appAccountId: '',
-            profileImageUrl: user.photoURL ?? '',
-            fcmToken: '',
-          );
-
-          await _firestore
-              .collection('customers')
-              .doc(phone)
-              .set(userModel.toMap());
-        }
-
-        // Store maid ID in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_roleType, 'customer'); // Store role type
-      }
-
-      return user;
-    } catch (e) {
-      print('Error during Google Sign-in: $e');
-      return null;
-    }
+    return user;
   }
 
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
-  }
-
-  // Sign in with Google and create user in Firestore
-  Future<User?> signInWithGoogleCustomer() async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null;
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        // 1. Save to `users` collection if not exists
-        final existingUser =
-            await _firestore.collection('users').doc(user.uid).get();
-
-        if (!existingUser.exists) {
-          RoleModel role = RoleModel(
-            canRead: false,
-            canWrite: false,
-            isSuperAdmin: false,
-            roleType: 'Admin',
-          ); // Default role
-          UserModel userModel = UserModel(
-            id: user.uid,
-            name: user.displayName!,
-            email: user.email!,
-            phone: '',
-            userId: user.uid,
-            gender: '',
-            address: '',
-            supportPhone: '',
-            appAccountId: '',
-            role: role,
-            photoUrl: user.photoURL!,
-            fcmToken: '',
-          );
-          await createCustomerAccount(
-            userCredential,
-            user.phoneNumber ?? '',
-          );
-        }
-
-        // Store maid ID in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_roleType, 'admin'); // Store role type
-      }
-
-      return user;
-    } catch (e) {
-      print('Error during Google Sign-in: $e');
-      return null;
-    }
   }
 }

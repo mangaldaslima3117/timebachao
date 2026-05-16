@@ -1,26 +1,87 @@
 {
   "project_info": {
-    "project_number": "175571916693",
-    "project_id": "timebachaodev",
-    "storage_bucket": "timebachaodev.firebasestorage.app"
+    "project_number": "207691663784",
+    "project_id": "timebachaodev-9a8aa",
+    "storage_bucket": "timebachaodev-9a8aa.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:175571916693:android:50793d065eaf664caa489c",
+        "mobilesdk_app_id": "1:207691663784:android:fcf699ea91d12f0488b59d",
         "android_client_info": {
           "package_name": "com.winiman.timebachao.bookingservice.customer"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "207691663784-fc40g12gm8c6fukngftaodh3uv7qcp6v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyCATCHJiNUri02ldZL0MaNACQ82ddWu6_Q"
+          "current_key": "AIzaSyCNfcdvW8PB0aRhnEgXD7C6cU1YWadkgnc"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207691663784-fc40g12gm8c6fukngftaodh3uv7qcp6v.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "207691663784-40n9drs1ice9eec6p8t7qj1g9v3kfjtp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:207691663784:android:3a8ade9bd2fed27b88b59d",
+        "android_client_info": {
+          "package_name": "com.winiman.timebachao.bookingservice.partner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "207691663784-ee2s9ua4t7o39fb5hv4a23v1vgfj1b7d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winiman.timebachao.bookingservice.partner",
+            "certificate_hash": "6b8bc8046a0e1fa80f8724d3d11cc054547fa408"
+          }
+        },
+        {
+          "client_id": "207691663784-fc40g12gm8c6fukngftaodh3uv7qcp6v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNfcdvW8PB0aRhnEgXD7C6cU1YWadkgnc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207691663784-fc40g12gm8c6fukngftaodh3uv7qcp6v.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "207691663784-40n9drs1ice9eec6p8t7qj1g9v3kfjtp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com"
+              }
+            }
+          ]
         }
       }
     }

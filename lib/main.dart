@@ -32,7 +32,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 main() async {
-  const String appConfig = 'customer'; // Change to 'admin' or 'maid' as needed
+  const String appConfig = 'admin'; // Change to 'admin' or 'maid' as needed
   WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter is initialized
   await Firebase.initializeApp(); // Initialize Firebase
 

@@ -44,40 +44,40 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCATCHJiNUri02ldZL0MaNACQ82ddWu6_Q',
-    appId: '1:175571916693:android:50793d065eaf664caa489c',
-    messagingSenderId: '175571916693',
-    projectId: 'timebachaodev',
-    storageBucket: 'timebachaodev.firebasestorage.app',
+    apiKey: 'AIzaSyCNfcdvW8PB0aRhnEgXD7C6cU1YWadkgnc',
+    appId: '1:207691663784:android:fcf699ea91d12f0488b59d',
+    messagingSenderId: '207691663784',
+    projectId: 'timebachaodev-9a8aa',
+    storageBucket: 'timebachaodev-9a8aa.firebasestorage.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAvdG7yPM_KMxqnpSRHa-Fhfpwj0ArsNHo',
-    appId: '1:175571916693:web:e2b6df8a8469d9a8aa489c',
-    messagingSenderId: '175571916693',
-    projectId: 'timebachaodev',
-    authDomain: 'timebachaodev.firebaseapp.com',
-    storageBucket: 'timebachaodev.firebasestorage.app',
-    measurementId: 'G-N18K4TX69B',
+    apiKey: 'AIzaSyCtHhiqPWsA5Bk7yvKu-VNCsqhXMe27Wwc',
+    appId: '1:207691663784:web:855333bb446a1a6388b59d',
+    messagingSenderId: '207691663784',
+    projectId: 'timebachaodev-9a8aa',
+    authDomain: 'timebachaodev-9a8aa.firebaseapp.com',
+    storageBucket: 'timebachaodev-9a8aa.firebasestorage.app',
+    measurementId: 'G-PFDQ3YZ2WL',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAt_f-Bhx0NPh6aOlxf9jGHpFhGHE_6G8Q',
-    appId: '1:175571916693:ios:d884c0f91666ee37aa489c',
-    messagingSenderId: '175571916693',
-    projectId: 'timebachaodev',
-    storageBucket: 'timebachaodev.firebasestorage.app',
+    apiKey: 'AIzaSyD_yOxL0YfcBs30jwnbdde0Dcvf-gtTdAw',
+    appId: '1:207691663784:ios:dd12d6cf78788ecc88b59d',
+    messagingSenderId: '207691663784',
+    projectId: 'timebachaodev-9a8aa',
+    storageBucket: 'timebachaodev-9a8aa.firebasestorage.app',
     iosBundleId: 'com',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAvdG7yPM_KMxqnpSRHa-Fhfpwj0ArsNHo',
-    appId: '1:175571916693:web:189da83fd33cdbb5aa489c',
-    messagingSenderId: '175571916693',
-    projectId: 'timebachaodev',
-    authDomain: 'timebachaodev.firebaseapp.com',
-    storageBucket: 'timebachaodev.firebasestorage.app',
-    measurementId: 'G-LBSS3DVZ4D',
+    apiKey: 'AIzaSyCtHhiqPWsA5Bk7yvKu-VNCsqhXMe27Wwc',
+    appId: '1:207691663784:web:b6adef4fa6f0a0f188b59d',
+    messagingSenderId: '207691663784',
+    projectId: 'timebachaodev-9a8aa',
+    authDomain: 'timebachaodev-9a8aa.firebaseapp.com',
+    storageBucket: 'timebachaodev-9a8aa.firebasestorage.app',
+    measurementId: 'G-G5H3N9CTWZ',
   );
 
 }
