@@ -163,11 +163,7 @@ class _BookingsPageState extends ConsumerState<MaidBookingDetailsPage> {
 
     final totalPrice = booking.services.fold<double>(
           0.0,
-          (sum, service) =>
-              sum +
-              (service.discountPrice > 0
-                  ? service.discountPrice
-                  : service.minPrice),
+          (sum, service) => sum + service.finalPrice,
         ) *
         booking.bookingSlots.length;
 
@@ -492,16 +488,16 @@ class _BookingsPageState extends ConsumerState<MaidBookingDetailsPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (service.discountPrice > 0)
+                        if (service.mrpPrice > 0)
                           Text(
-                            '₹${service.minPrice.toStringAsFixed(0)}',
+                            '₹${service.mrpPrice.toStringAsFixed(0)}',
                             style: const TextStyle(
                               decoration: TextDecoration.lineThrough,
                               fontSize: 12,
                             ),
                           ),
                         Text(
-                          '₹${(service.discountPrice > 0 ? service.discountPrice : service.minPrice).toStringAsFixed(0)}',
+                          '₹${(service.mrpPrice > 0 ? service.sellingPrice : service.finalPrice).toStringAsFixed(0)}',
                           style: const TextStyle(fontSize: 16),
                         ),
                       ],

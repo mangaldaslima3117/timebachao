@@ -158,8 +158,10 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
       fcmToken: '',
     );
 
-    double totalServicePrice = selectedServices.fold(0,
-        (sum, s) => sum + (s.discountPrice > 0 ? s.discountPrice : s.minPrice));
+    double totalServicePrice = selectedServices.fold<double>(
+      0.0,
+      (sum, service) => sum + service.finalPrice,
+    );
     double totalPrice = totalServicePrice * individualSlots.length;
 
     BookingModel booking = BookingModel(
@@ -563,12 +565,12 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                           //final isSelected = selectedServices.contains(service);
                           return CheckboxListTile(
                             title: Text(service.name),
-                            subtitle: service.discountPrice > 0
+                            subtitle: service.hasDiscount
                                 ? Row(
                                     mainAxisAlignment: MainAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '₹${service.discountPrice.toStringAsFixed(0)}',
+                                        '₹${service.finalPrice.toStringAsFixed(0)}',
                                         style: const TextStyle(
                                           fontSize: 16,
                                           color: Colors.black54,
@@ -578,7 +580,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                                         width: 10,
                                       ),
                                       Text(
-                                        '₹${service.minPrice.toStringAsFixed(0)}',
+                                        '₹${service.mrpPrice.toStringAsFixed(0)}',
                                         style: TextStyle(
                                           color: Colors.grey.shade400,
                                           fontSize: 14,
@@ -590,7 +592,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                                     ],
                                   )
                                 : Text(
-                                    '₹${service.minPrice.toStringAsFixed(0)}',
+                                    '₹${service.mrpPrice.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       color: Colors.black54,
@@ -850,7 +852,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                           ),
                         ),
                         Text(
-                            "₹${service.discountPrice > 0 ? service.discountPrice.toStringAsFixed(0) : service.minPrice.toStringAsFixed(0)}"),
+                            "₹${service.hasDiscount ? service.finalPrice.toStringAsFixed(0) : service.mrpPrice.toStringAsFixed(0)}"),
                       ],
                     );
                   }).toList(),
@@ -858,7 +860,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                     children: [
                       const Spacer(),
                       Text(
-                        "Sub Total : ₹${selectedServices.fold(0, (sum, s) => sum.toInt() + (s.discountPrice > 0 ? s.discountPrice : s.minPrice).toInt()).toStringAsFixed(0)}",
+                        "Sub Total : ₹${selectedServices.fold(0, (sum, s) => sum.toInt() + s.finalPrice.toInt()).toStringAsFixed(0)}",
                         style: const TextStyle(
                           fontSize: 14,
                         ),
@@ -871,7 +873,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                     children: [
                       const Spacer(),
                       Text(
-                        "Total : ₹${(individualSlots.length * selectedServices.fold(0, (sum, s) => sum.toInt() + (s.discountPrice > 0 ? s.discountPrice : s.minPrice).toInt())).toStringAsFixed(0)}",
+                        "Total : ₹${(individualSlots.length * selectedServices.fold(0, (sum, s) => sum.toInt() + (s.hasDiscount ? s.finalPrice : s.mrpPrice).toInt())).toStringAsFixed(0)}",
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

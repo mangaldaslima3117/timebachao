@@ -47,7 +47,6 @@ class _CustomerWelcomePageState extends ConsumerState<CustomerWelcomePage> {
 
     ref.watch(categoryProvider);
 
-
     return WillPopScope(
       onWillPop: () async => false, // Prevent back navigation
       child: Scaffold(
@@ -233,13 +232,10 @@ class _CustomerWelcomePageState extends ConsumerState<CustomerWelcomePage> {
                           final singleService = filteredList[index];
 
                           double discountPercent = 0;
-                          if (singleService.discountPrice > 0 &&
-                              singleService.minPrice > 0 &&
-                              singleService.discountPrice <
-                                  singleService.minPrice) {
-                            discountPercent = ((singleService.minPrice -
-                                        singleService.discountPrice) /
-                                    singleService.minPrice) *
+                          if (singleService.hasDiscount) {
+                            discountPercent = ((singleService.mrpPrice -
+                                        singleService.sellingPrice) /
+                                    singleService.mrpPrice) *
                                 100;
                           }
 
@@ -268,13 +264,13 @@ class _CustomerWelcomePageState extends ConsumerState<CustomerWelcomePage> {
                                           softWrap: true,
                                         ),
                                         const SizedBox(height: 8),
-                                        singleService.discountPrice > 0
+                                        singleService.hasDiscount
                                             ? Row(
                                                 mainAxisAlignment:
                                                     MainAxisAlignment.center,
                                                 children: [
                                                   Text(
-                                                    '₹${singleService.discountPrice.toStringAsFixed(0)}',
+                                                    '₹${singleService.finalPrice.toStringAsFixed(0)}',
                                                     style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -284,7 +280,7 @@ class _CustomerWelcomePageState extends ConsumerState<CustomerWelcomePage> {
                                                   ),
                                                   const SizedBox(width: 10),
                                                   Text(
-                                                    '₹${singleService.minPrice.toStringAsFixed(0)}',
+                                                    '₹${singleService.mrpPrice.toStringAsFixed(0)}',
                                                     style: TextStyle(
                                                       color:
                                                           Colors.grey.shade400,
@@ -298,7 +294,7 @@ class _CustomerWelcomePageState extends ConsumerState<CustomerWelcomePage> {
                                                 ],
                                               )
                                             : Text(
-                                                '₹${singleService.minPrice.toStringAsFixed(0)}',
+                                                '₹${singleService.mrpPrice.toStringAsFixed(0)}',
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 16,

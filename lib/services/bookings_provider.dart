@@ -136,7 +136,7 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
         totalPrice: booking.services.fold(
             0,
             (sum, s) =>
-                sum! + (s.discountPrice > 0 ? s.discountPrice : s.minPrice)),
+                sum! + s.finalPrice),
         startDate: slot.assignedBy,
         timeSlot: slot,
       );
