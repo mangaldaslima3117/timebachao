@@ -60,8 +60,10 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
           .where('timeSlot.serviceDate', isLessThanOrEqualTo: end)
           .get();
 
-      final bookings =
-          snapshot.docs.map((doc) => BookingModel.fromMap(doc.data())).toList();
+      final bookings = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return BookingModel.fromMap({...data, 'bookingId': doc.id});
+      }).toList();
       bookings.sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
       _filteredBookings = bookings;
       state = AsyncValue.data(bookings);
@@ -85,8 +87,10 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
           .where('bookedOn', isLessThanOrEqualTo: end)
           .get();
 
-      final bookings =
-          snapshot.docs.map((doc) => BookingModel.fromMap(doc.data())).toList();
+      final bookings = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return BookingModel.fromMap({...data, 'bookingId': doc.id});
+      }).toList();
 
       bookings.sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
 
@@ -135,8 +139,8 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
         bookingId: DateTime.now().millisecondsSinceEpoch.toString(),
         totalPrice: booking.services.fold(
             0,
-            (sum, s) =>
-                sum! + s.finalPrice),
+            (total, s) =>
+                total! + s.finalPrice),
         startDate: slot.assignedBy,
         timeSlot: slot,
       );
@@ -294,14 +298,14 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
 
   double get totalRevenue => _filteredBookings
       .where((b) => b.serviceStatus.toLowerCase() == AppConstants.completed)
-      .fold(0.0, (sum, b) => sum + b.totalPrice);
+      .fold(0.0, (total, b) => total + b.totalPrice);
 
   double get totalCommission => _filteredBookings
       .where((b) => b.serviceStatus.toLowerCase() == AppConstants.completed)
       .fold(
           0.0,
-          (sum, b) =>
-              sum + (b.totalPrice * (b.maid!.commissionPercentage / 100)));
+          (total, b) =>
+              total + (b.totalPrice * (b.maid!.commissionPercentage / 100)));
 
   double get totalProfit => totalRevenue - totalCommission;
 
@@ -401,7 +405,20 @@ final bookingByMaidIdProvider =
     Provider.family<List<BookingModel>?, String>((ref, maidId) {
   final bookings = ref.watch(bookingsProvider).valueOrNull;
   if (bookings == null) return null;
-  final maidBookings = bookings.where((b) => b.maidId == maidId).toList();
+  final maidBookings =
+      bookings.where((b) => isBookingAssignedToMaid(b, maidId)).toList();
   debugPrint('Filtered bookings for maidId $maidId: ${maidBookings.length}');
   return maidBookings;
 });
+
+bool isBookingAssignedToMaid(BookingModel booking, String maidId) {
+  final normalizedMaidId = maidId.trim();
+  if (normalizedMaidId.isEmpty) return false;
+
+  if ((booking.maidId ?? '').trim() == normalizedMaidId) return true;
+  if ((booking.maid?.id ?? '').trim() == normalizedMaidId) return true;
+
+  return booking.bookingSlots.any(
+    (slot) => (slot.maidId ?? '').trim() == normalizedMaidId,
+  );
+}

@@ -5,7 +5,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../models/earnings_summary.dart';
-import '../../../../models/maid_earning_param_model.dart';
 import '../../../../services/bookings_provider.dart';
 
 final maidEarningsProvider = FutureProvider<EarningsSummary?>((ref) async {
@@ -14,9 +13,14 @@ final maidEarningsProvider = FutureProvider<EarningsSummary?>((ref) async {
 
   return bookingsAsync.when(
     data: (bookings) {
+      if (maidId == null || maidId.isEmpty) {
+        return EarningsSummary.empty();
+      }
+
       final filtered = bookings
           .where((b) =>
-              b.maidId == maidId && b.serviceStatus == AppConstants.completed)
+              isBookingAssignedToMaid(b, maidId) &&
+              b.serviceStatus == AppConstants.completed)
           .toList();
 
       double totalEarnings =
@@ -64,7 +68,8 @@ final maidEarningsByIdProvider =
 
   return bookingsAsync.when(
     data: (bookings) {
-      final filtered = bookings.where((b) => b.maidId == maid!.id).toList();
+      final filtered =
+          bookings.where((b) => isBookingAssignedToMaid(b, maid!.id)).toList();
       debugPrint('Filtered bookings: ${filtered.length}');
       double totalEarnings = filtered.fold(
           0.0,
