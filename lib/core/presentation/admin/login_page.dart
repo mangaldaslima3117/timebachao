@@ -28,16 +28,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {  // ✅ Added
                   'assets/images/timebachaologo.png',
                   height: 200,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Time Bachao',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal[800],
-                  ),
-                ),
-                const SizedBox(height: 32),
+                // const SizedBox(height: 16),
+                // Text(
+                //   'Time Bachao',
+                //   style: TextStyle(
+                //     fontSize: 32,
+                //     fontWeight: FontWeight.bold,
+                //     color: Colors.teal[800],
+                //   ),
+                // ),
+                // const SizedBox(height: 32),
 
                 // Google Sign-In Button (Admin)
                 GestureDetector(

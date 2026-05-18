@@ -63,20 +63,20 @@ class _MaidLoginPageState extends ConsumerState<MaidLoginPage> {
               children: [
                 // App Logo
                 Image.asset(
-                  'assets/images/Time Bachao.png', // Place your generated logo here
+                  'assets/images/timebachaologo.png', // Place your generated logo here
                   height: 200,
                 ),
-                const SizedBox(height: 16),
+                //const SizedBox(height: 16),
                 // App Name
-                Text(
-                  'Time Bachao',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal[800],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                // Text(
+                //   'Time Bachao',
+                //   style: TextStyle(
+                //     fontSize: 32,
+                //     fontWeight: FontWeight.bold,
+                //     color: Colors.teal[800],
+                //   ),
+                // ),
+                // const SizedBox(height: 20),
                 Center(
                   child: Card(
                     margin: const EdgeInsets.all(1),
