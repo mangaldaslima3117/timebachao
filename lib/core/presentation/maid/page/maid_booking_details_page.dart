@@ -13,7 +13,6 @@ import '../../../../services/maids_provider.dart';
 import '../../../utils/app_constants.dart';
 import '../../../widgets/assignment_details_widget.dart';
 import '../../../widgets/common_widgets.dart';
-import '../../admin/maid_assignment_page.dart';
 import '../services/current_maid_provider.dart';
 
 class MaidBookingDetailsPage extends ConsumerStatefulWidget {
@@ -155,6 +154,67 @@ class _BookingsPageState extends ConsumerState<MaidBookingDetailsPage> {
     );
   }
 
+  Future<bool> _verifyStartOtp(BookingModel booking) async {
+    if (booking.otp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Start OTP is not available for this booking.",
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
+    }
+
+    String otpInput = '';
+    final verified = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Verify Start OTP"),
+        content: TextField(
+          onChanged: (value) => otpInput = value.trim(),
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          decoration: const InputDecoration(
+            counterText: '',
+            hintText: 'Enter OTP shared by customer',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+            onPressed: () {
+              if (otpInput == booking.otp) {
+                Navigator.pop(context, true);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Invalid OTP",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              "Verify",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return verified == true;
+  }
+
   @override
   Widget build(BuildContext context) {
     BookingModel booking =
@@ -255,6 +315,11 @@ class _BookingsPageState extends ConsumerState<MaidBookingDetailsPage> {
                   return;
                 }
 
+                if (value == AppConstants.inProgress) {
+                  final verified = await _verifyStartOtp(booking);
+                  if (!verified) return;
+                }
+
                 booking.assignedTime = booking.assignedTime!.isNotEmpty
                     ? booking.assignedTime
                     : (value == AppConstants.inProgress
@@ -264,6 +329,9 @@ class _BookingsPageState extends ConsumerState<MaidBookingDetailsPage> {
                 booking.serviceCompletedTime = value == AppConstants.completed
                     ? DateFormat('dd-MM-yyyy HH:mm:ss').format(DateTime.now())
                     : '';
+                booking.otpVerifiedTime = value == AppConstants.inProgress
+                    ? DateFormat('dd-MM-yyyy HH:mm:ss').format(DateTime.now())
+                    : booking.otpVerifiedTime;
                 debugPrint(booking.maid!.toMap().toString());
 
                 if (value == AppConstants.completed ||
@@ -583,6 +651,12 @@ class _BookingsPageState extends ConsumerState<MaidBookingDetailsPage> {
                   'Booked By',
                   booking.bookedBy,
                 ),
+                if (booking.otpVerifiedTime.isNotEmpty)
+                  _infoRow(
+                    context,
+                    'Started On',
+                    booking.otpVerifiedTime,
+                  ),
                 if (booking.maidId!.isNotEmpty)
                   _infoRow(
                     context,

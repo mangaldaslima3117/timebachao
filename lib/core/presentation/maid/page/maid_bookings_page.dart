@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../services/bookings_provider.dart';
 import '../../../../services/notification_service.dart';
+import '../../../utils/app_constants.dart';
 import '../../../utils/common_function.dart';
 import '../../../widgets/booking_list_view.dart';
 import '../../../widgets/booking_not_found_widget.dart';
@@ -20,8 +21,7 @@ class MaidBookingsPage extends ConsumerStatefulWidget {
 
 class _MaidBookingsPageState extends ConsumerState<MaidBookingsPage> {
   DateTimeRange? selectedRange;
-  DateFormat dateFormat = DateFormat('yyyy-MM-dd');
-  DateFormat dateFormat2 = DateFormat('dd-MM-yyyy HH:mm:ss');
+  DateFormat dateFormat = DateFormat('dd-MM-yyyy');
   DateFormat dateFormat3 = DateFormat('dd-MM-yyyy');
   final now = DateTime.now();
 
@@ -52,6 +52,7 @@ class _MaidBookingsPageState extends ConsumerState<MaidBookingsPage> {
   Widget build(BuildContext context) {
     final bookingState = ref.watch(bookingsProvider);
     final maidDetails = ref.watch(currentMaidProvider);
+    final maidIdAsync = ref.watch(maidIdProvider);
     final booking = ref.watch(bookingsProvider.notifier);
 
     return DefaultTabController(
@@ -168,19 +169,23 @@ class _MaidBookingsPageState extends ConsumerState<MaidBookingsPage> {
             //         maidDetails != null && b.maidId == maidDetails.id ||
             //         b.maidId!.isEmpty)
             //     .toList();
-            debugPrint('Before Filtered Bookings: ${maidBookings.length} maid id : ${maidDetails?.id}');
+            debugPrint(
+                'Before Filtered Bookings: ${maidBookings.length} maid id : ${maidDetails?.id}');
+
+            final maidId = maidDetails?.id ?? maidIdAsync.valueOrNull ?? '';
+            if (maidId.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
             final bookings = maidBookings.where((b) {
-              // return b.maid!.id == maidDetails?.id ||
-              //     (b.maid!.id.isEmpty);
-                  return (b.maid!.id.isEmpty) || b.maid!.id == maidDetails?.id;
+              return isBookingAssignedToMaid(b, maidId);
             }).toList();
 
             debugPrint('Filtered Bookings: ${bookings.length}');
 
             final todayBookings = bookings
                 .where(
-                    (b) => b.timeSlot.serviceDate == dateFormat2.format(today))
+                    (b) => b.timeSlot.serviceDate == dateFormat3.format(today))
                 .toList()
               ..sort((a, b) => DateFormat('dd-MM-yyyy')
                   .parse(a.timeSlot.serviceDate!)
@@ -189,7 +194,8 @@ class _MaidBookingsPageState extends ConsumerState<MaidBookingsPage> {
 
             final upcomingBookings = bookings
                 .where((b) =>
-                    b.timeSlot.serviceDate != dateFormat2.format(today) &&
+                    b.serviceStatus != AppConstants.completed &&
+                    b.timeSlot.serviceDate != dateFormat3.format(today) &&
                     isFutureDate(b.timeSlot.serviceDate))
                 .toList()
               ..sort((a, b) => DateFormat('dd-MM-yyyy')

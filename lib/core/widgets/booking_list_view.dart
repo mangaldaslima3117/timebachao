@@ -1,18 +1,24 @@
 import 'package:bookmyservice/core/presentation/admin/new_booking_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/booking_model.dart';
+import '../../services/shared_preference_provider.dart';
 import '../presentation/admin/booking_details_page.dart';
 import '../utils/app_constants.dart';
 import 'booking_not_found_widget.dart';
 
-class BookingListView extends StatelessWidget {
+class BookingListView extends ConsumerWidget {
   final List<BookingModel> bookings;
   const BookingListView({super.key, required this.bookings});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(roleProvider);
+    final isMaid = role?.roleType == AppConstants.maid_role;
+
     return SingleChildScrollView(
       child: bookings.isNotEmpty
           ? Column(
@@ -57,25 +63,26 @@ class BookingListView extends StatelessWidget {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: IconButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => NewBookingPage(
-                                              initialBooking: booking,
+                                  if (!isMaid)
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: IconButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => NewBookingPage(
+                                                initialBooking: booking,
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(
-                                        Icons.edit,
-                                        size: 20,
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          size: 20,
+                                        ),
                                       ),
-                                    ),
-                                  )
+                                    )
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -127,9 +134,7 @@ class BookingListView extends StatelessWidget {
                                     width: MediaQuery.of(context).size.width *
                                         0.52,
                                     child: Text(
-                                      booking.maid!.name.isNotEmpty
-                                          ? booking.maid!.name
-                                          : 'Not Assigned',
+                                      _maidName(booking),
                                     ),
                                   ),
                                   // if (booking.serviceStatus !=
@@ -174,6 +179,55 @@ class BookingListView extends StatelessWidget {
                                       ),
                                     ),
                                   ),
+                                  if (!isMaid && booking.otp.isNotEmpty) ...[
+                                    const SizedBox(
+                                      width: 20,
+                                    ),
+                                    const Text(
+                                      'OTP : ',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          booking.otp,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        InkWell(
+                                          onTap: () async {
+                                            await Clipboard.setData(
+                                              ClipboardData(text: booking.otp),
+                                            );
+
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text('OTP copied'),
+                                                duration: Duration(seconds: 1),
+                                              ),
+                                            );
+                                          },
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.copy_rounded,
+                                              size: 18,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
                             ],
@@ -190,5 +244,17 @@ class BookingListView extends StatelessWidget {
             )
           : const BookingNotFoundWidget(),
     );
+  }
+
+  String _maidName(BookingModel booking) {
+    final maidName = booking.maid?.name ?? '';
+    if (maidName.isNotEmpty) return maidName;
+
+    for (final slot in booking.bookingSlots) {
+      final slotMaidName = slot.maidName ?? '';
+      if (slotMaidName.isNotEmpty) return slotMaidName;
+    }
+
+    return 'Not Assigned';
   }
 }

@@ -17,60 +17,96 @@ import '../maid/services/current_maid_provider.dart';
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 class _T {
   // Teal
-  static const teal       = Color(0xFF1D9E75);
-  static const tealDark   = Color(0xFF0F6E56);
-  static const tealDeep   = Color(0xFF085041);
-  static const tealBg     = Color(0xFFE1F5EE);
+  static const teal = Color(0xFF1D9E75);
+  static const tealDark = Color(0xFF0F6E56);
+  static const tealDeep = Color(0xFF085041);
+  static const tealBg = Color(0xFFE1F5EE);
   static const tealBorder = Color(0xFF9FE1CB);
   // Indigo
-  static const indigo     = Color(0xFF534AB7);
-  static const indigoBg   = Color(0xFFEEEDFE);
+  static const indigo = Color(0xFF534AB7);
+  static const indigoBg = Color(0xFFEEEDFE);
   // Orange
-  static const orange       = Color(0xFF854F0B);
-  static const orangeBg     = Color(0xFFFAEEDA);
+  static const orange = Color(0xFF854F0B);
+  static const orangeBg = Color(0xFFFAEEDA);
   static const orangeBorder = Color(0xFFFAC775);
   // Green
-  static const green        = Color(0xFF3B6D11);
-  static const greenBg      = Color(0xFFEAF3DE);
-  static const greenBorder  = Color(0xFFC0DD97);
+  static const green = Color(0xFF3B6D11);
+  static const greenBg = Color(0xFFEAF3DE);
+  static const greenBorder = Color(0xFFC0DD97);
   // Red
-  static const red          = Color(0xFFA32D2D);
-  static const redBg        = Color(0xFFFCEBEB);
-  static const redBorder    = Color(0xFFF7C1C1);
+  static const red = Color(0xFFA32D2D);
+  static const redBg = Color(0xFFFCEBEB);
+  static const redBorder = Color(0xFFF7C1C1);
   // Neutrals
-  static const pageBg       = Color(0xFFF0F2F5);
-  static const textPrimary  = Color(0xFF111827);
-  static const textSecondary= Color(0xFF6B7280);
-  static const divider      = Color(0xFFE5E7EB);
+  static const pageBg = Color(0xFFF0F2F5);
+  static const textPrimary = Color(0xFF111827);
+  static const textSecondary = Color(0xFF6B7280);
+  static const divider = Color(0xFFE5E7EB);
 
   // Status helpers
   static Color badgeBg(String s) {
     switch (_norm(s)) {
-      case 'confirmed': case 'accepted': case '2': return tealBg;
-      case 'paid':      case 'completed': case '3': return greenBg;
-      case 'cancelled': case '5': return redBg;
-      case 'inprogress': case 'in progress': case '4': return const Color(0xFFDBEAFE);
-      default: return orangeBg;
+      case 'confirmed':
+      case 'accepted':
+      case '2':
+        return tealBg;
+      case 'paid':
+      case 'completed':
+      case '3':
+        return greenBg;
+      case 'cancelled':
+      case '5':
+        return redBg;
+      case 'inprogress':
+      case 'in progress':
+      case '4':
+        return const Color(0xFFDBEAFE);
+      default:
+        return orangeBg;
     }
   }
 
   static Color badgeText(String s) {
     switch (_norm(s)) {
-      case 'confirmed': case 'accepted': case '2': return tealDark;
-      case 'paid':      case 'completed': case '3': return green;
-      case 'cancelled': case '5': return red;
-      case 'inprogress': case 'in progress': case '4': return const Color(0xFF1D4ED8);
-      default: return orange;
+      case 'confirmed':
+      case 'accepted':
+      case '2':
+        return tealDark;
+      case 'paid':
+      case 'completed':
+      case '3':
+        return green;
+      case 'cancelled':
+      case '5':
+        return red;
+      case 'inprogress':
+      case 'in progress':
+      case '4':
+        return const Color(0xFF1D4ED8);
+      default:
+        return orange;
     }
   }
 
   static Color badgeBorder(String s) {
     switch (_norm(s)) {
-      case 'confirmed': case 'accepted': case '2': return tealBorder;
-      case 'paid':      case 'completed': case '3': return greenBorder;
-      case 'cancelled': case '5': return redBorder;
-      case 'inprogress': case 'in progress': case '4': return const Color(0xFF93C5FD);
-      default: return orangeBorder;
+      case 'confirmed':
+      case 'accepted':
+      case '2':
+        return tealBorder;
+      case 'paid':
+      case 'completed':
+      case '3':
+        return greenBorder;
+      case 'cancelled':
+      case '5':
+        return redBorder;
+      case 'inprogress':
+      case 'in progress':
+      case '4':
+        return const Color(0xFF93C5FD);
+      default:
+        return orangeBorder;
     }
   }
 
@@ -100,8 +136,8 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
       final locs = await locationFromAddress(
           widget.currentBooking.customerAddress.toString());
       if (locs.isNotEmpty && mounted) {
-        setState(() => targetLocation =
-            LatLng(locs.first.latitude, locs.first.longitude));
+        setState(() =>
+            targetLocation = LatLng(locs.first.latitude, locs.first.longitude));
       }
     } catch (e) {
       debugPrint('Geocoding error: $e');
@@ -127,7 +163,9 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
       perm = await Geolocator.requestPermission();
     }
     if (perm == LocationPermission.denied ||
-        perm == LocationPermission.deniedForever) return null;
+        perm == LocationPermission.deniedForever) {
+      return null;
+    }
     return Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
   }
@@ -163,6 +201,11 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
       return;
     }
 
+    if (value == AppConstants.inProgress) {
+      final verified = await _verifyStartOtp(booking);
+      if (!verified) return;
+    }
+
     booking.assignedTime = booking.assignedTime!.isNotEmpty
         ? booking.assignedTime
         : (value == AppConstants.inProgress
@@ -171,6 +214,9 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
     booking.serviceCompletedTime = value == AppConstants.completed
         ? DateFormat('dd-MM-yyyy HH:mm:ss').format(DateTime.now())
         : '';
+    booking.otpVerifiedTime = value == AppConstants.inProgress
+        ? DateFormat('dd-MM-yyyy HH:mm:ss').format(DateTime.now())
+        : booking.otpVerifiedTime;
 
     if (value == AppConstants.completed || value == AppConstants.cancelled) {
       ref
@@ -219,9 +265,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
                 const SizedBox(height: 10),
                 Text(body,
                     style: const TextStyle(
-                        fontSize: 13,
-                        color: _T.textSecondary,
-                        height: 1.5)),
+                        fontSize: 13, color: _T.textSecondary, height: 1.5)),
                 const SizedBox(height: 20),
                 Row(children: [
                   Expanded(
@@ -247,6 +291,92 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
           ),
         ),
       );
+
+  Future<bool> _verifyStartOtp(BookingModel booking) async {
+    if (booking.otp.isEmpty) {
+      _snack('Start OTP is not available for this booking.', error: true);
+      return false;
+    }
+
+    String otpInput = '';
+    final verified = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Verify Start OTP',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: _T.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Enter the OTP shared by the customer to start this work.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: _T.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: (value) => otpInput = value.trim(),
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: 'Enter OTP',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(children: [
+                Expanded(
+                  child: _PillBtn(
+                    label: 'Cancel',
+                    bg: const Color(0xFFF3F4F6),
+                    fg: _T.textSecondary,
+                    onTap: () => Navigator.pop(ctx, false),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _PillBtn(
+                    label: 'Verify',
+                    bg: _T.teal,
+                    fg: Colors.white,
+                    onTap: () {
+                      if (otpInput == booking.otp) {
+                        Navigator.pop(ctx, true);
+                      } else {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('Invalid OTP'),
+                            backgroundColor: _T.red,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+    return verified == true;
+  }
 
   void _snack(String msg, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -296,9 +426,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
         child: Column(
           children: [
             _MetaStrip(
-                booking: booking,
-                totalPrice: totalPrice,
-                dayCount: dayCount),
+                booking: booking, totalPrice: totalPrice, dayCount: dayCount),
             const SizedBox(height: 14),
             _customerCard(booking),
             const SizedBox(height: 14),
@@ -308,7 +436,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
             const SizedBox(height: 14),
             _maidCard(booking, isAdmin),
             const SizedBox(height: 14),
-            _bookingInfoCard(booking),
+            _bookingInfoCard(booking, isAdmin),
             const SizedBox(height: 14),
             _paymentCard(booking, totalPrice),
           ],
@@ -332,12 +460,9 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
         title: Column(children: [
           const Text('Booking Details',
               style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w500,
-                  color: _T.teal)),
+                  fontSize: 17, fontWeight: FontWeight.w500, color: _T.teal)),
           Text('#${booking.bookingId}',
-              style:
-                  const TextStyle(fontSize: 11, color: _T.textSecondary)),
+              style: const TextStyle(fontSize: 11, color: _T.textSecondary)),
         ]),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
@@ -361,16 +486,14 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
         title: 'Customer Information',
         child: Column(children: [
           _Row(label: 'Name', value: b.customerInfo.name),
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(
             label: 'Phone',
             child: Text(b.customerInfo.phone,
                 style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: _T.teal)),
+                    fontSize: 13, fontWeight: FontWeight.w500, color: _T.teal)),
           ),
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(label: 'Address', value: b.customerAddress.toString()),
           const SizedBox(height: 6),
           Align(
@@ -389,8 +512,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
   // ── Time Slots ──────────────────────────────────────────────────────────────
 
   Widget _timeSlotCard(BookingModel b) {
-    final slots =
-        b.bookingSlots.isNotEmpty ? b.bookingSlots : [b.timeSlot];
+    final slots = b.bookingSlots.isNotEmpty ? b.bookingSlots : [b.timeSlot];
     return _Card(
       iconBg: _T.tealBg,
       iconColor: _T.teal,
@@ -411,8 +533,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
 
   // ── Services ────────────────────────────────────────────────────────────────
 
-  Widget _servicesCard(BookingModel b, double totalPrice, int days) =>
-      _Card(
+  Widget _servicesCard(BookingModel b, double totalPrice, int days) => _Card(
         iconBg: _T.tealBg,
         iconColor: _T.teal,
         icon: Icons.auto_awesome_rounded,
@@ -430,7 +551,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (en.key > 0) ...[
-                    _HDivider(),
+                    const _HDivider(),
                     const SizedBox(height: 10),
                   ],
                   Row(
@@ -459,8 +580,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
                               const SizedBox(height: 2),
                               Text(svc.categoryName,
                                   style: const TextStyle(
-                                      fontSize: 12,
-                                      color: _T.textSecondary)),
+                                      fontSize: 12, color: _T.textSecondary)),
                             ],
                           ],
                         ),
@@ -500,25 +620,21 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
                 ],
               );
             }),
-            _HDivider(),
+            const _HDivider(),
             const SizedBox(height: 10),
             _SumRow(
-                label: 'Subtotal',
-                value: '₹${totalPrice.toStringAsFixed(0)}'),
+                label: 'Subtotal', value: '₹${totalPrice.toStringAsFixed(0)}'),
             if (days > 1) ...[
               const SizedBox(height: 4),
               _SumRow(
                   label: '× $days days',
-                  value:
-                      '₹${(totalPrice * days).toStringAsFixed(0)}'),
+                  value: '₹${(totalPrice * days).toStringAsFixed(0)}'),
             ],
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                  color: _T.tealBg,
-                  borderRadius: BorderRadius.circular(10)),
+                  color: _T.tealBg, borderRadius: BorderRadius.circular(10)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -559,9 +675,7 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
                 radius: 24,
                 backgroundColor: _T.indigoBg,
                 child: Text(
-                  b.maid!.name.isNotEmpty
-                      ? b.maid!.name[0].toUpperCase()
-                      : '?',
+                  b.maid!.name.isNotEmpty ? b.maid!.name[0].toUpperCase() : '?',
                   style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
@@ -585,27 +699,22 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
               ),
             ]),
             const SizedBox(height: 8),
-            _HDivider(indent: true),
+            const _HDivider(indent: true),
             const SizedBox(height: 2),
             _Row(
               label: 'Assigned On',
-              value: b.assignedTime?.isNotEmpty == true
-                  ? b.assignedTime!
-                  : '—',
+              value: b.assignedTime?.isNotEmpty == true ? b.assignedTime! : '—',
             ),
-            _HDivider(indent: true),
+            const _HDivider(indent: true),
             _Row(
               label: 'Assigned By',
-              value: b.assignedBy?.isNotEmpty == true
-                  ? b.assignedBy!
-                  : '—',
+              value: b.assignedBy?.isNotEmpty == true ? b.assignedBy! : '—',
             ),
           ] else
-            _Row(label: 'Maid', value: 'Not assigned'),
-
+            const _Row(label: 'Maid', value: 'Not assigned'),
           if (isAdmin && !done) ...[
             const SizedBox(height: 4),
-            _HDivider(),
+            const _HDivider(),
             const SizedBox(height: 10),
             Row(children: [
               if (hasMaid) ...[
@@ -630,55 +739,58 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
 
   // ── Booking Info ────────────────────────────────────────────────────────────
 
-  Widget _bookingInfoCard(BookingModel b) => _Card(
+  Widget _bookingInfoCard(BookingModel b, bool isAdmin) => _Card(
         iconBg: _T.orangeBg,
         iconColor: _T.orange,
         icon: Icons.receipt_long_rounded,
         title: 'Booking Info',
         child: Column(children: [
           _Row(label: 'Status', child: _Badge(status: b.serviceStatus)),
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(
             label: 'Booking ID',
             child: Text('#${b.bookingId}',
-                style: const TextStyle(
-                    fontSize: 12, color: _T.textSecondary)),
+                style: const TextStyle(fontSize: 12, color: _T.textSecondary)),
           ),
           if (b.parentBookingId.isNotEmpty) ...[
-            _HDivider(indent: true),
+            const _HDivider(indent: true),
             _Row(label: 'Parent Booking', value: b.parentBookingId),
           ],
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(
             label: 'Booked On',
-            value: DateFormat('dd MMM yyyy, hh:mm a')
-                .format(b.bookingDate),
+            value: DateFormat('dd MMM yyyy, hh:mm a').format(b.bookingDate),
           ),
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(label: 'Booked By', value: b.bookedBy),
+          if (b.otpVerifiedTime.isNotEmpty) ...[
+            const _HDivider(indent: true),
+            _Row(label: 'Started On', value: b.otpVerifiedTime),
+          ],
           if (b.maidId!.isNotEmpty &&
               (b.maid?.commissionPercentage ?? 0) > 0) ...[
-            _HDivider(indent: true),
+            const _HDivider(indent: true),
             _Row(
               label: 'Commission',
-              value:
-                  '${b.maid!.commissionPercentage.toStringAsFixed(0)}%',
+              value: '${b.maid!.commissionPercentage.toStringAsFixed(0)}%',
             ),
           ],
           if (b.serviceStatus == AppConstants.completed) ...[
-            _HDivider(indent: true),
-            _Row(
-                label: 'Completed On',
-                value: b.serviceCompletedTime),
+            const _HDivider(indent: true),
+            _Row(label: 'Completed On', value: b.serviceCompletedTime),
             if (b.assignedTime!.isNotEmpty &&
                 b.serviceCompletedTime.isNotEmpty) ...[
-              _HDivider(indent: true),
+              const _HDivider(indent: true),
               _Row(
                 label: 'Service Time',
                 value: AppConstants.getTimeDifference(
                     b.assignedTime!, b.serviceCompletedTime),
               ),
             ],
+          ],
+          if (isAdmin) ...[
+            const _HDivider(indent: true),
+            _Row(label: 'OTP', value: b.otp.isNotEmpty ? b.otp : '—'),
           ],
         ]),
       );
@@ -694,21 +806,20 @@ class _BookingsPageState extends ConsumerState<BookingDetailsPage> {
       title: 'Payment',
       child: Column(children: [
         _Row(label: 'Status', child: _Badge(status: b.paymentInfo!.status)),
-        _HDivider(indent: true),
+        const _HDivider(indent: true),
         _Row(
           label: 'Payment ID',
           child: Text(
             b.paymentInfo!.paymentId.isNotEmpty
                 ? b.paymentInfo!.paymentId
                 : '—',
-            style:
-                const TextStyle(fontSize: 13, color: _T.textSecondary),
+            style: const TextStyle(fontSize: 13, color: _T.textSecondary),
           ),
         ),
         if (isPaid) ...[
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(label: 'Method', value: b.paymentInfo!.method),
-          _HDivider(indent: true),
+          const _HDivider(indent: true),
           _Row(
             label: 'Payment Date',
             value: DateFormat('dd MMM yyyy, hh:mm a')
@@ -757,8 +868,7 @@ class _Card extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(10)),
+                    color: iconBg, borderRadius: BorderRadius.circular(10)),
                 child: Icon(icon, size: 17, color: iconColor),
               ),
               const SizedBox(width: 10),
@@ -798,8 +908,7 @@ class _Row extends StatelessWidget {
           SizedBox(
             width: 112,
             child: Text(label,
-                style: const TextStyle(
-                    fontSize: 12, color: _T.textSecondary)),
+                style: const TextStyle(fontSize: 12, color: _T.textSecondary)),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -839,8 +948,7 @@ class _SlotChip extends StatelessWidget {
           color: _T.tealBg,
           border: Border.all(color: _T.tealBorder, width: 0.5),
           borderRadius: BorderRadius.circular(10)),
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -855,8 +963,7 @@ class _SlotChip extends StatelessWidget {
                     color: _T.tealDeep)),
           ]),
           Row(children: [
-            const Icon(Icons.access_time_rounded,
-                size: 14, color: _T.tealDeep),
+            const Icon(Icons.access_time_rounded, size: 14, color: _T.tealDeep),
             const SizedBox(width: 6),
             Text(time,
                 style: const TextStyle(
@@ -906,8 +1013,7 @@ class _MetaStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -919,8 +1025,7 @@ class _MetaStrip extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Status',
-                  style: TextStyle(
-                      fontSize: 11, color: _T.textSecondary)),
+                  style: TextStyle(fontSize: 11, color: _T.textSecondary)),
               const SizedBox(height: 4),
               _Badge(status: booking.serviceStatus),
             ],
@@ -931,15 +1036,12 @@ class _MetaStrip extends StatelessWidget {
           child: Column(
             children: [
               const Text('Total',
-                  style: TextStyle(
-                      fontSize: 11, color: _T.textSecondary)),
+                  style: TextStyle(fontSize: 11, color: _T.textSecondary)),
               const SizedBox(height: 4),
               Text(
                 '₹${(totalPrice * dayCount).toStringAsFixed(0)}',
                 style: const TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w500,
-                    color: _T.teal),
+                    fontSize: 19, fontWeight: FontWeight.w500, color: _T.teal),
               ),
             ],
           ),
@@ -950,8 +1052,7 @@ class _MetaStrip extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Text('Days',
-                  style: TextStyle(
-                      fontSize: 11, color: _T.textSecondary)),
+                  style: TextStyle(fontSize: 11, color: _T.textSecondary)),
               const SizedBox(height: 4),
               Text(
                 '$dayCount ${dayCount == 1 ? 'day' : 'days'}',
@@ -978,11 +1079,9 @@ class _SumRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: _T.textSecondary)),
+              style: const TextStyle(fontSize: 13, color: _T.textSecondary)),
           Text(value,
-              style: const TextStyle(
-                  fontSize: 13, color: _T.textSecondary)),
+              style: const TextStyle(fontSize: 13, color: _T.textSecondary)),
         ],
       );
 }
@@ -992,19 +1091,16 @@ class _TealBtn extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  const _TealBtn(
-      {required this.icon, required this.label, this.onTap});
+  const _TealBtn({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
               color: _T.tealBg,
-              border:
-                  Border.all(color: _T.tealBorder, width: 0.5),
+              border: Border.all(color: _T.tealBorder, width: 0.5),
               borderRadius: BorderRadius.circular(20)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 15, color: _T.tealDark),
@@ -1030,21 +1126,17 @@ class _RedBtn extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
               color: _T.redBg,
-              border:
-                  Border.all(color: _T.redBorder, width: 0.5),
+              border: Border.all(color: _T.redBorder, width: 0.5),
               borderRadius: BorderRadius.circular(20)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 15, color: _T.red),
             const SizedBox(width: 6),
             Text(label,
                 style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: _T.red)),
+                    fontSize: 13, fontWeight: FontWeight.w500, color: _T.red)),
           ]),
         ),
       );
@@ -1066,14 +1158,12 @@ class _PillBtn extends StatelessWidget {
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-              color: bg, borderRadius: BorderRadius.circular(12)),
+          decoration:
+              BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
           child: Center(
               child: Text(label,
                   style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: fg,
-                      fontSize: 14))),
+                      fontWeight: FontWeight.w600, color: fg, fontSize: 14))),
         ),
       );
 }
@@ -1091,51 +1181,46 @@ class _ActionMenu extends StatelessWidget {
       onSelected: onSelected,
       icon: const Icon(Icons.more_vert_rounded,
           color: _T.textSecondary, size: 22),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
       itemBuilder: (_) => [
         if (s != AppConstants.inProgress &&
             s != AppConstants.accepted &&
             s != AppConstants.completed)
-          _mi(AppConstants.accepted, 'Accept',
-              Icons.check_circle_outline, _T.teal, _T.tealBg),
+          _mi(AppConstants.accepted, 'Accept', Icons.check_circle_outline,
+              _T.teal, _T.tealBg),
         if (s == AppConstants.accepted && s != AppConstants.completed)
           _mi(AppConstants.inProgress, 'Mark In Progress',
-              Icons.play_circle_outline, Colors.blue,
-              const Color(0xFFDBEAFE)),
+              Icons.play_circle_outline, Colors.blue, const Color(0xFFDBEAFE)),
         if (s == AppConstants.inProgress && s != AppConstants.completed)
-          _mi(AppConstants.completed, 'Mark Complete',
-              Icons.task_alt_rounded, _T.tealDark, _T.tealBg),
+          _mi(AppConstants.completed, 'Mark Complete', Icons.task_alt_rounded,
+              _T.tealDark, _T.tealBg),
         if (s == AppConstants.completed &&
             booking.paymentInfo!.status != AppConstants.paid)
-          _mi(AppConstants.paid, 'Mark as Paid',
-              Icons.payments_outlined, _T.green, _T.greenBg),
+          _mi(AppConstants.paid, 'Mark as Paid', Icons.payments_outlined,
+              _T.green, _T.greenBg),
         if (s != AppConstants.inProgress && s != AppConstants.completed)
-          _mi(AppConstants.cancelled, 'Cancel Booking',
-              Icons.cancel_outlined, _T.red, _T.redBg),
+          _mi(AppConstants.cancelled, 'Cancel Booking', Icons.cancel_outlined,
+              _T.red, _T.redBg),
       ],
     );
   }
 
-  PopupMenuItem<String> _mi(String value, String label, IconData icon,
-      Color color, Color bg) =>
+  PopupMenuItem<String> _mi(
+          String value, String label, IconData icon, Color color, Color bg) =>
       PopupMenuItem(
         value: value,
         child: Row(children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(8)),
+                color: bg, borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, size: 15, color: color),
           ),
           const SizedBox(width: 10),
           Text(label,
               style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: color)),
+                  fontSize: 13, fontWeight: FontWeight.w500, color: color)),
         ]),
       );
 }

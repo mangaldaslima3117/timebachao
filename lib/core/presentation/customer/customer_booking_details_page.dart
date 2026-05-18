@@ -140,9 +140,7 @@ class _CustomerBookingDetailsPageState
 
     final totalPrice = booking.services.fold<double>(
       0.0,
-      (sum, service) =>
-          sum +
-          service.finalPrice,
+      (sum, service) => sum + service.finalPrice,
     );
 
     return Scaffold(
@@ -501,6 +499,11 @@ class _CustomerBookingDetailsPageState
                 _infoRow(context, 'Booking #', booking.bookingId),
                 if (booking.parentBookingId.isNotEmpty)
                   _infoRow(context, 'Parent Booking', booking.parentBookingId),
+                if (booking.otp.isNotEmpty &&
+                    booking.otpVerifiedTime.isEmpty &&
+                    booking.serviceStatus != AppConstants.completed &&
+                    booking.serviceStatus != AppConstants.cancelled)
+                  _infoRow(context, 'Start OTP', booking.otp),
                 _infoRow(
                   context,
                   'Booked On',

@@ -41,6 +41,8 @@ class BookingModel {
   List<TimeSlotModel> bookingSlots; // THIS IS USED FOR BOOKING SLOTS
   final double taxPercentage; // Added field for tax percentage
   final String parentBookingId; // Added field for parent booking ID
+  final String otp; // OTP required before starting service
+  String otpVerifiedTime; // Time when OTP was verified to start service
 
   BookingModel({
     required this.bookingId,
@@ -74,7 +76,14 @@ class BookingModel {
     required this.bookingSlots,
     required this.taxPercentage,
     required this.parentBookingId,
+    this.otp = '',
+    this.otpVerifiedTime = '',
   });
+
+  static String generateOtp([int seed = 0]) {
+    final value = (DateTime.now().microsecondsSinceEpoch + seed) % 9000;
+    return (value + 1000).toString();
+  }
 
   factory BookingModel.fromMap(Map<String, dynamic> map) {
     return BookingModel(
@@ -148,11 +157,15 @@ class BookingModel {
                   .map((e) => TimeSlotModel.fromMap(e))
                   .toList()
               : [],
-          taxPercentage: map.containsKey('taxPercentage')
+      taxPercentage: map.containsKey('taxPercentage')
           ? (map['taxPercentage'] as num?)?.toDouble() ?? 0.0
           : 0.0,
       parentBookingId: map.containsKey('parentBookingId')
           ? map['parentBookingId'] ?? ''
+          : '',
+      otp: map.containsKey('otp') ? map['otp'] ?? '' : '',
+      otpVerifiedTime: map.containsKey('otpVerifiedTime')
+          ? map['otpVerifiedTime'] ?? ''
           : '',
     );
   }
@@ -190,6 +203,8 @@ class BookingModel {
       'endDate': endDate,
       'taxPercentage': taxPercentage, // Added field for tax percentage
       'parentBookingId': parentBookingId, // Added field for parent booking ID
+      'otp': otp,
+      'otpVerifiedTime': otpVerifiedTime,
     };
   }
 
@@ -226,6 +241,8 @@ class BookingModel {
     String? endDate, // Added field for start and end date of the booking
     double? taxPercentage, // Added field for tax percentage
     String? parentBookingId, // Added field for parent booking ID
+    String? otp,
+    String? otpVerifiedTime,
   }) {
     return BookingModel(
       bookingId: bookingId ?? this.bookingId,
@@ -259,11 +276,16 @@ class BookingModel {
           this.commissionPercentage, // Added field for commission percentage
       paymentInfo:
           paymentInfo ?? this.paymentInfo, // Added field for payment info
-      bookingSlots: bookingSlots ?? this.bookingSlots, // Added field for available time slots
+      bookingSlots: bookingSlots ??
+          this.bookingSlots, // Added field for available time slots
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate, // Added field for start and end date
-      taxPercentage: taxPercentage ?? this.taxPercentage, // Added field for tax percentage
-      parentBookingId: parentBookingId ?? this.parentBookingId, // Added field for parent booking ID
+      taxPercentage:
+          taxPercentage ?? this.taxPercentage, // Added field for tax percentage
+      parentBookingId: parentBookingId ??
+          this.parentBookingId, // Added field for parent booking ID
+      otp: otp ?? this.otp,
+      otpVerifiedTime: otpVerifiedTime ?? this.otpVerifiedTime,
     );
   }
 
@@ -300,6 +322,8 @@ class BookingModel {
       endDate: '',
       taxPercentage: 0.0, // Default tax percentage
       parentBookingId: '', // Default parent booking ID
+      otp: '',
+      otpVerifiedTime: '',
     );
   }
 }

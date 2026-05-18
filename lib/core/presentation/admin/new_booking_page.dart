@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:bookmyservice/models/payment_info_model.dart';
 import 'package:bookmyservice/services/app_account_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:intl/intl.dart';
@@ -31,13 +34,12 @@ class NewBookingPage extends ConsumerStatefulWidget {
 class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   int _currentStep = 0;
 
+  // ── Controllers ────────────────────────────────────────────────────────────
   TextEditingController customerIdController = TextEditingController();
   TextEditingController customerNameController = TextEditingController();
   TextEditingController customerPhoneController = TextEditingController();
   TextEditingController customerGenderController = TextEditingController();
   TextEditingController noteController = TextEditingController();
-
-  // Address fields controller
   TextEditingController houseController = TextEditingController();
   TextEditingController areaController = TextEditingController();
   TextEditingController landmarkController = TextEditingController();
@@ -66,6 +68,15 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   List<String> sortedDates = [];
   final dateFormatStep = DateFormat('dd-MM-yyyy');
 
+  // ── OTP ────────────────────────────────────────────────────────────────────
+  late String _generatedOtp;
+
+  String _generateOtp() {
+    final rand = Random.secure();
+    return List.generate(6, (_) => rand.nextInt(10)).join();
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
   void _nextStep() {
     bool isValid = false;
     if (_currentStep == 0) {
@@ -74,6 +85,10 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       isValid = true;
     }
     if (isValid) {
+      // Generate OTP fresh when reaching the confirmation step
+      if (_currentStep == 3) {
+        setState(() => _generatedOtp = _generateOtp());
+      }
       setState(() => _currentStep += 1);
     }
   }
@@ -88,29 +103,21 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
 
     if (customerNameController.text.isEmpty ||
         customerPhoneController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill customer information")),
-      );
+      _showSnack("Please fill customer information");
       return;
     }
-
     if (selectedDate == null ||
         selectedTimeSlot == null ||
         selectedTimeSlot!.startTime.isEmpty ||
         selectedTimeSlot!.endTime.isEmpty ||
         selectedServices.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select date and time slot")),
-      );
+      _showSnack("Please select date and time slot");
       return;
     }
-
     if (houseController.text.isEmpty ||
         areaController.text.isEmpty ||
         cityController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter address")),
-      );
+      _showSnack("Please enter address");
       return;
     }
 
@@ -139,21 +146,24 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       userId: '',
       gender: customerGenderController.text,
       address: address!,
-      appAccountId:
-          appAccount != null ? appAccount.appAccountId : "",
+      appAccountId: appAccount != null ? appAccount.appAccountId : "",
       profileImageUrl: '',
       fcmToken: '',
     );
 
-    double totalServicePrice = selectedServices.fold<double>(
+    final double totalServicePrice = selectedServices.fold<double>(
       0.0,
       (sum, service) => sum + service.finalPrice,
     );
-    // Guard against individualSlots being empty (slot not yet picked) — treat as 1 day
-    final int dayCount = individualSlots.isNotEmpty ? individualSlots.length : 1;
-    double totalPrice = totalServicePrice * dayCount;
+    final int dayCount =
+        individualSlots.isNotEmpty ? individualSlots.length : 1;
+    final double totalPrice = totalServicePrice * dayCount;
 
-    BookingModel booking = BookingModel(
+    // Use existing OTP if editing, generate new one if creating
+    final String otp =
+        isBookingExist ? widget.initialBooking!.otp : _generatedOtp;
+
+    final BookingModel booking = BookingModel(
       bookingId: bookingId,
       appAccountId: appAccount != null ? appAccount.appAccountId : "",
       customerId: customerIdController.text.trim(),
@@ -186,9 +196,8 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       commissionPercentage: 0,
       paymentInfo: PaymentInfoModel.defaultPayment(),
       bookingSlots: individualSlots.values.toList(),
-      startDate: selectedDate != null
-          ? bookingFormat.format(selectedDate!)
-          : "",
+      startDate:
+          selectedDate != null ? bookingFormat.format(selectedDate!) : "",
       endDate: selectedDate != null
           ? bookingFormat.format(selectedDate!.add(const Duration(days: 1)))
           : "",
@@ -196,6 +205,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       parentBookingId: individualSlots.length > 1
           ? DateTime.now().microsecondsSinceEpoch.toString()
           : '',
+      otp: _generatedOtp, // ✅ stored in booking
     );
 
     if (isBookingExist) {
@@ -204,15 +214,19 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       await ref.read(bookingsProvider.notifier).createBookingsBatch(booking);
     }
 
-    await ref
-        .read(customerProvider.notifier)
-        .addCustomer(booking.customerInfo);
+    await ref.read(customerProvider.notifier).addCustomer(booking.customerInfo);
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(isBookingExist ? "Booking Updated!" : "Booking Created!")));
-    Navigator.pop(context);
+    if (mounted) {
+      _showSnack(isBookingExist ? "Booking Updated!" : "Booking Created!");
+      Navigator.pop(context);
+    }
   }
 
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ── Input decoration ───────────────────────────────────────────────────────
   final inputDecoration = InputDecoration(
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -254,6 +268,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   @override
   void initState() {
     super.initState();
+    _generatedOtp = _generateOtp(); // initial OTP
     pickedDateRange = DateTimeRange(
       start: DateTime.now(),
       end: DateTime.now(),
@@ -273,7 +288,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
           text: widget.initialBooking!.customerAddress.state);
       countryController = TextEditingController(
           text: widget.initialBooking!.customerAddress.country);
-
       address = AddressModel(
         houseNumber: houseController.text.trim(),
         areaName: areaController.text.trim(),
@@ -283,13 +297,16 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
         state: stateController.text.trim(),
         country: countryController.text.trim(),
       );
-
       customerNameController.text = widget.initialBooking!.customerInfo.name;
       customerPhoneController.text = widget.initialBooking!.customerInfo.phone;
       selectedServices = widget.initialBooking!.services;
       selectedDate = widget.initialBooking!.bookingDate;
       selectedTimeSlot = widget.initialBooking!.timeSlot;
       selectedTimeSlots = widget.initialBooking!.bookingSlots;
+      // Use existing OTP when editing
+      _generatedOtp = widget.initialBooking!.otp.isNotEmpty
+          ? widget.initialBooking!.otp
+          : _generateOtp();
     } else {
       address = AddressModel(
         houseNumber: "",
@@ -374,8 +391,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
     }
   }
 
-  // ─── Service Selection Card ────────────────────────────────────────────────
-
+  // ─── Service Card ──────────────────────────────────────────────────────────
   Widget _buildServiceCard(ServiceModel service) {
     final bool isSelected = selectedServices.any((s) => s.id == service.id);
     final bool hasProperties = service.numberOfBeds > 0 ||
@@ -414,13 +430,11 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header row ─────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Checkbox
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     width: 22,
@@ -435,11 +449,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: isSelected
-                        ? const Icon(Icons.check,
-                            size: 14, color: Colors.white)
+                        ? const Icon(Icons.check, size: 14, color: Colors.white)
                         : null,
                   ),
-                  // Name + category
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,7 +492,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                       ],
                     ),
                   ),
-                  // Price block
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -511,8 +522,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                           decoration: BoxDecoration(
                             color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(6),
-                            border:
-                                Border.all(color: Colors.green.shade200),
+                            border: Border.all(color: Colors.green.shade200),
                           ),
                           child: Text(
                             '${((service.mrpPrice - service.sellingPrice) / service.mrpPrice * 100).round()}% off',
@@ -528,21 +538,15 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                 ],
               ),
             ),
-
-            // ── Divider ────────────────────────────────────────────────
             Divider(
               height: 1,
               thickness: 0.8,
               color: isSelected ? Colors.teal.shade100 : Colors.grey.shade200,
             ),
-
-            // ── Duration + extra price ─────────────────────────────────
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               child: Row(
                 children: [
-                  // Duration
                   if (service.duration.isNotEmpty) ...[
                     Icon(Icons.schedule_rounded,
                         size: 14, color: Colors.grey.shade500),
@@ -564,7 +568,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                     ],
                     const SizedBox(width: 16),
                   ],
-                  // Description preview
                   if (service.description.isNotEmpty)
                     Expanded(
                       child: Text(
@@ -581,8 +584,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                 ],
               ),
             ),
-
-            // ── Property chips ─────────────────────────────────────────
             if (hasProperties) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
@@ -636,8 +637,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                   ],
                 ),
               ),
-
-              // Price breakdown
               if (service.propertyTotal > 0)
                 Container(
                   margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
@@ -681,12 +680,10 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
     );
   }
 
-  // ─── Selected Services Summary Bar ────────────────────────────────────────
-
   Widget _buildSelectedSummary() {
     if (selectedServices.isEmpty) return const SizedBox.shrink();
-    final total = selectedServices.fold<double>(
-        0.0, (sum, s) => sum + s.finalPrice);
+    final total =
+        selectedServices.fold<double>(0.0, (sum, s) => sum + s.finalPrice);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -696,8 +693,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Colors.white, size: 18),
+          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
           const SizedBox(width: 8),
           Text(
             '${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''} selected',
@@ -760,9 +756,8 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       ),
       body: Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: Colors.teal,
-              ),
+          colorScheme:
+              Theme.of(context).colorScheme.copyWith(primary: Colors.teal),
         ),
         child: Stepper(
           type: StepperType.vertical,
@@ -784,7 +779,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                         horizontal: 24, vertical: 12),
                   ),
                   child: Text(
-                    _currentStep == 4 ? "Submit" : "Next",
+                    _currentStep == 4 ? "Submit Booking" : "Next",
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
@@ -807,7 +802,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
             );
           },
           steps: [
-            // ── Step 1: Customer Info ──────────────────────────────────────
+            // ── Step 1: Customer Info ────────────────────────────────────
             Step(
               title: const Text("Customer Info"),
               isActive: _currentStep >= 0,
@@ -857,17 +852,13 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                           setState(() {
                             customerPhoneController.text = customer.phone;
                             customerNameController.text = customer.name;
-                            houseController.text =
-                                customer.address.houseNumber;
+                            houseController.text = customer.address.houseNumber;
                             areaController.text = customer.address.areaName;
-                            landmarkController.text =
-                                customer.address.landmark;
+                            landmarkController.text = customer.address.landmark;
                             cityController.text = customer.address.city;
-                            pinCodeController.text =
-                                customer.address.pinCode;
+                            pinCodeController.text = customer.address.pinCode;
                             stateController.text = customer.address.state;
-                            countryController.text =
-                                customer.address.country;
+                            countryController.text = customer.address.country;
                             address = AddressModel(
                               houseNumber: houseController.text.trim(),
                               areaName: areaController.text.trim(),
@@ -906,7 +897,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               ),
             ),
 
-            // ── Step 2: Services ───────────────────────────────────────────
+            // ── Step 2: Services ─────────────────────────────────────────
             Step(
               title: const Text("Services"),
               isActive: _currentStep >= 1,
@@ -920,10 +911,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Summary bar (visible when services are selected)
                         _buildSelectedSummary(),
-
-                        // Section label
                         Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Text(
@@ -934,14 +922,12 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                             ),
                           ),
                         ),
-
-                        // Service cards
                         ...services.map(_buildServiceCard).toList(),
                       ],
                     ),
             ),
 
-            // ── Step 3: Date & Time ────────────────────────────────────────
+            // ── Step 3: Date & Time ──────────────────────────────────────
             Step(
               title: const Text("Date & Time"),
               isActive: _currentStep >= 2,
@@ -974,8 +960,8 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                             ],
                           )
                         : const Text("Select Booking Date"),
-                    trailing: const Icon(Icons.calendar_today,
-                        color: Colors.teal),
+                    trailing:
+                        const Icon(Icons.calendar_today, color: Colors.teal),
                     onTap: _pickDateRange,
                   ),
                   const SizedBox(height: 8),
@@ -994,16 +980,14 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                           slot.startTime == selectedTimeSlot!.startTime &&
                           slot.endTime == selectedTimeSlot!.endTime;
                       return ChoiceChip(
-                        disabledColor:
-                            isDisabled ? Colors.grey.shade200 : null,
+                        disabledColor: isDisabled ? Colors.grey.shade200 : null,
                         selectedColor: Colors.teal,
                         checkmarkColor:
                             isSelected ? Colors.white : Colors.black,
                         label: Text(
                           "${slot.startTime} - ${slot.endTime}",
                           style: TextStyle(
-                            color:
-                                isSelected ? Colors.white : Colors.black,
+                            color: isSelected ? Colors.white : Colors.black,
                             fontSize: 14,
                           ),
                         ),
@@ -1012,8 +996,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                             ? null
                             : (_) => setState(() {
                                   selectedTimeSlot = slot;
-                                  individualSlots =
-                                      generateSlotMapForRange(
+                                  individualSlots = generateSlotMapForRange(
                                     startDate: startDate!,
                                     endDate: endDate!,
                                     selectedSlot: slot,
@@ -1035,14 +1018,13 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               ),
             ),
 
-            // ── Step 4: Address ────────────────────────────────────────────
+            // ── Step 4: Address ──────────────────────────────────────────
             Step(
               title: const Text("Address"),
               isActive: _currentStep >= 3,
               content: Column(
                 children: [
-                  _buildTextField(
-                      houseController, "House / Building No."),
+                  _buildTextField(houseController, "House / Building No."),
                   _buildTextField(areaController, "Area Name"),
                   _buildTextField(landmarkController, "Landmark"),
                   _buildTextField(cityController, "City"),
@@ -1054,7 +1036,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               ),
             ),
 
-            // ── Step 5: Confirmation ───────────────────────────────────────
+            // ── Step 5: Confirmation ─────────────────────────────────────
             Step(
               title: const Text("Confirmation"),
               isActive: _currentStep >= 4,
@@ -1086,17 +1068,16 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                     ),
                   const Text(
                     "Review your booking details before submitting.",
-                    style:
-                        TextStyle(fontSize: 15, color: Colors.black54),
+                    style: TextStyle(fontSize: 15, color: Colors.black54),
                   ),
                   const SizedBox(height: 14),
-
-                  // Customer Details
                   _buildConfirmSection(
                     title: "Customer Details",
                     rows: [
-                      _ConfirmRow(label: "Name", value: customerNameController.text),
-                      _ConfirmRow(label: "Phone", value: customerPhoneController.text),
+                      _ConfirmRow(
+                          label: "Name", value: customerNameController.text),
+                      _ConfirmRow(
+                          label: "Phone", value: customerPhoneController.text),
                       _ConfirmRow(
                         label: "Address",
                         value: address!.houseNumber.isNotEmpty
@@ -1106,25 +1087,19 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Booking Date & Time
                   _buildConfirmSection(
                     title: "Booking Date & Time",
                     rows: individualSlots.keys.toList().map((dateStr) {
                       final slot = individualSlots[dateStr]!;
                       return _ConfirmRow(
                         label: dateStr,
-                        value:
-                            "${slot.startTime} - ${slot.endTime}",
+                        value: "${slot.startTime} - ${slot.endTime}",
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 12),
-
-                  // Services
                   _buildConfirmServicesSection(),
                   const SizedBox(height: 14),
-
                   TextField(
                     controller: noteController,
                     decoration: inputDecoration.copyWith(
@@ -1141,8 +1116,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       ),
     );
   }
-
-  // ─── Confirmation section builders ────────────────────────────────────────
 
   Widget _buildConfirmSection({
     required String title,
@@ -1204,10 +1177,10 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   }
 
   Widget _buildConfirmServicesSection() {
-    final subtotal = selectedServices.fold<double>(
-        0.0, (sum, s) => sum + s.finalPrice);
-    // Same guard as _submitBooking — if no slots selected yet, treat as 1 day
-    final int dayCount = individualSlots.isNotEmpty ? individualSlots.length : 1;
+    final subtotal =
+        selectedServices.fold<double>(0.0, (sum, s) => sum + s.finalPrice);
+    final int dayCount =
+        individualSlots.isNotEmpty ? individualSlots.length : 1;
     final total = subtotal * dayCount;
 
     return Container(
@@ -1260,8 +1233,6 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                     ),
                     if (service.hasDiscount)
                       Text(
-                        // Save = MRP minus the actual final price (sellingPrice + propertyTotal)
-                        // NOT just sellingPrice, since finalPrice already includes property add-ons
                         'MRP ₹${service.mrpPrice.toStringAsFixed(0)}  •  Save ₹${(service.mrpPrice - service.finalPrice).toStringAsFixed(0)}',
                         style: TextStyle(
                           fontSize: 11,
@@ -1286,8 +1257,8 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Subtotal',
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.grey.shade600)),
+                    style:
+                        TextStyle(fontSize: 13, color: Colors.grey.shade600)),
                 Text('₹${subtotal.toStringAsFixed(0)}',
                     style: const TextStyle(fontSize: 13)),
               ],
@@ -1301,8 +1272,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                 children: [
                   Text(
                     '× $dayCount days',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                   const SizedBox(),
                 ],
@@ -1310,8 +1280,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
             ),
           Container(
             margin: const EdgeInsets.fromLTRB(10, 6, 10, 10),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.teal.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -1344,15 +1313,13 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   }
 }
 
-// ─── Small helper data class ───────────────────────────────────────────────
+// ─── Helper classes ────────────────────────────────────────────────────────
 
 class _ConfirmRow {
   final String label;
   final String value;
   const _ConfirmRow({required this.label, required this.value});
 }
-
-// ─── Property mini chip ────────────────────────────────────────────────────
 
 class _PropertyMiniChip extends StatelessWidget {
   final IconData icon;
@@ -1399,8 +1366,7 @@ class _PropertyMiniChip extends StatelessWidget {
               '+₹${price.toStringAsFixed(0)}',
               style: TextStyle(
                 fontSize: 11,
-                color:
-                    isSelected ? Colors.teal.shade600 : Colors.grey.shade500,
+                color: isSelected ? Colors.teal.shade600 : Colors.grey.shade500,
               ),
             ),
           ],

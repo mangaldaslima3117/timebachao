@@ -105,10 +105,13 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
   // Create a booking
   Future<void> createBooking(BookingModel booking) async {
     try {
+      final bookingToSave = booking.otp.isNotEmpty
+          ? booking
+          : booking.copyWith(otp: BookingModel.generateOtp());
       await _firestore
           .collection('bookings')
-          .doc(booking.bookingId)
-          .set(booking.toMap());
+          .doc(bookingToSave.bookingId)
+          .set(bookingToSave.toMap());
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
@@ -137,10 +140,9 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
 
       final newBooking = booking.copyWith(
         bookingId: DateTime.now().millisecondsSinceEpoch.toString(),
-        totalPrice: booking.services.fold(
-            0,
-            (total, s) =>
-                total! + s.finalPrice),
+        otp: booking.otp.isNotEmpty ? booking.otp : BookingModel.generateOtp(i),
+        totalPrice:
+            booking.services.fold(0, (total, s) => total! + s.finalPrice),
         startDate: slot.assignedBy,
         timeSlot: slot,
       );
@@ -168,10 +170,13 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
   // Update a booking
   Future<void> updateBooking(BookingModel booking) async {
     try {
+      final bookingToSave = booking.otp.isNotEmpty
+          ? booking
+          : booking.copyWith(otp: BookingModel.generateOtp());
       await _firestore
           .collection('bookings')
-          .doc(booking.bookingId)
-          .update(booking.toMap());
+          .doc(bookingToSave.bookingId)
+          .update(bookingToSave.toMap());
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
@@ -214,6 +219,7 @@ class BookingsNotifier extends StateNotifier<AsyncValue<List<BookingModel>>> {
         'assignedBy': currentBooking.assignedBy,
         'maidId': currentBooking.maidId,
         'maid': currentBooking.maid?.toMap(),
+        'otpVerifiedTime': currentBooking.otpVerifiedTime,
       });
 
       // Optionally update local state if needed
