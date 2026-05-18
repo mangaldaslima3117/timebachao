@@ -25,7 +25,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {  // ✅ Added
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/images/Time Bachao.png',
+                  'assets/images/timebachaologo.png',
                   height: 200,
                 ),
                 const SizedBox(height: 16),
@@ -116,18 +116,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {  // ✅ Added
                 const SizedBox(height: 10),
 
                 // Login as Customer
-                OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(50),
-                    side: const BorderSide(color: Colors.teal),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text("Login as Customer",
-                      style: TextStyle(color: Colors.teal)),
-                ),
+                // OutlinedButton(
+                //   onPressed: () {},
+                //   style: OutlinedButton.styleFrom(
+                //     minimumSize: const Size.fromHeight(50),
+                //     side: const BorderSide(color: Colors.teal),
+                //     shape: RoundedRectangleBorder(
+                //       borderRadius: BorderRadius.circular(10),
+                //     ),
+                //   ),
+                //   child: const Text("Login as Customer",
+                //       style: TextStyle(color: Colors.teal)),
+                // ),
               ],
             ),
           ),
