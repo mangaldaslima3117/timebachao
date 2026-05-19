@@ -1,6 +1,9 @@
 // models/address_model.dart
 
 class AddressModel {
+  static const String defaultState = 'Odisha';
+  static const String defaultCountry = 'India';
+
   String houseNumber;
   String areaName;
   String landmark;
@@ -75,8 +78,8 @@ class AddressModel {
       landmark: '',
       city: '',
       pinCode: '',
-      state: '',
-      country: '',
+      state: defaultState,
+      country: defaultCountry,
     );
   }
 }

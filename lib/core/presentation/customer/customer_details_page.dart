@@ -51,8 +51,17 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage> {
     landController.text = widget.customer.address.landmark;
     cityController.text = widget.customer.address.city;
     pincodeController.text = widget.customer.address.pinCode;
-    stateController.text = widget.customer.address.state;
-    countryController.text = widget.customer.address.country;
+    stateController.text = _defaultStateIfEmpty(widget.customer.address.state);
+    countryController.text =
+        _defaultCountryIfEmpty(widget.customer.address.country);
+  }
+
+  String _defaultStateIfEmpty(String value) {
+    return value.trim().isEmpty ? AddressModel.defaultState : value;
+  }
+
+  String _defaultCountryIfEmpty(String value) {
+    return value.trim().isEmpty ? AddressModel.defaultCountry : value;
   }
 
   Future<void> _saveCustomerData() async {
@@ -81,9 +90,8 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage> {
       ),
       appAccountId: '',
       profileImageUrl: '',
-      fcmToken: widget.customer.fcmToken!.isNotEmpty
-          ? widget.customer.fcmToken
-          : '',
+      fcmToken:
+          widget.customer.fcmToken!.isNotEmpty ? widget.customer.fcmToken : '',
     );
 
     if (widget.customer.id.isNotEmpty) {

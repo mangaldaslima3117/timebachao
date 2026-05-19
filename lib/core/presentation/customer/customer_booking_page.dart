@@ -9,11 +9,13 @@ import '../../../models/booking_model.dart';
 import '../../../models/customer_model.dart';
 import '../../../models/maid_model.dart';
 import '../../../models/service_model.dart';
+import '../../../models/service_area_model.dart';
 import '../../../models/slot_model.dart';
 import '../../../services/authentication_provider.dart';
 import '../../../services/bookings_provider.dart';
 import '../../../services/customer_provider.dart';
 import '../../../services/service_provider.dart';
+import '../../../services/service_area_provider.dart';
 import '../../../services/slots_provider.dart';
 import '../../../services/user_provider.dart';
 import '../../utils/app_constants.dart';
@@ -86,6 +88,46 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
     if (_currentStep > 0) setState(() => _currentStep--);
   }
 
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  String _defaultStateIfEmpty(String value) {
+    return value.trim().isEmpty ? AddressModel.defaultState : value;
+  }
+
+  String _defaultCountryIfEmpty(String value) {
+    return value.trim().isEmpty ? AddressModel.defaultCountry : value;
+  }
+
+  bool _ensureServiceableArea() {
+    final city = cityController.text.trim();
+    final area = areaController.text.trim();
+    final serviceAreas = ref.read(serviceAreaProvider).maybeWhen(
+          data: (areas) => areas,
+          orElse: () => null,
+        );
+
+    if (serviceAreas == null) {
+      _showSnack("Please wait while service areas load");
+      return false;
+    }
+
+    if (ServiceAreaModel.isServiceableArea(serviceAreas, city, area)) {
+      return true;
+    }
+
+    final activeAreas =
+        ServiceAreaModel.activeAreaNamesForCity(serviceAreas, city);
+    final hint = activeAreas.isEmpty
+        ? " No active areas found for $city."
+        : " Available in $city: ${activeAreas.take(5).join(', ')}.";
+    _showSnack("Service is not available in $area, $city.$hint");
+    return false;
+  }
+
   void _submitBooking() async {
     String? duplicateMessage = '';
     final appAccount = ref.read(appAccountProvider);
@@ -123,6 +165,9 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
           content: Text("Please enter address "),
         ),
       );
+      return;
+    }
+    if (!_ensureServiceableArea()) {
       return;
     }
 
@@ -291,10 +336,10 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
     cityController = TextEditingController(text: booking.customerAddress.city);
     pinCodeController =
         TextEditingController(text: booking.customerAddress.pinCode);
-    stateController =
-        TextEditingController(text: booking.customerAddress.state);
-    countryController =
-        TextEditingController(text: booking.customerAddress.country);
+    stateController = TextEditingController(
+        text: _defaultStateIfEmpty(booking.customerAddress.state));
+    countryController = TextEditingController(
+        text: _defaultCountryIfEmpty(booking.customerAddress.country));
 
     address = AddressModel(
       houseNumber: houseController.text.trim(),
@@ -348,6 +393,70 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
             }
           });
         },
+      ),
+    );
+  }
+
+  Widget _buildServiceAreaStatus(
+    AsyncValue<List<ServiceAreaModel>> serviceAreasState,
+  ) {
+    final city = cityController.text.trim();
+    final area = areaController.text.trim();
+
+    if (city.isEmpty || area.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final serviceAreas = serviceAreasState.valueOrNull;
+    if (serviceAreas == null) {
+      return _buildAreaStatusBanner(
+        icon: Icons.schedule_outlined,
+        message: 'Checking service availability...',
+        color: Colors.grey,
+      );
+    }
+
+    final isServiceable =
+        ServiceAreaModel.isServiceableArea(serviceAreas, city, area);
+
+    return _buildAreaStatusBanner(
+      icon: isServiceable ? Icons.check_circle_outline : Icons.block_outlined,
+      message: isServiceable
+          ? 'Service is available in $area, $city'
+          : 'Service is not available in $area, $city',
+      color: isServiceable ? Colors.green : Colors.red,
+    );
+  }
+
+  Widget _buildAreaStatusBanner({
+    required IconData icon,
+    required String message,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -408,6 +517,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
   @override
   Widget build(BuildContext context) {
     final servicesAsync = ref.watch(maidServiceProvider);
+    final serviceAreasState = ref.watch(serviceAreaProvider);
     final customers = ref.read(customerProvider);
     List<ServiceModel> services = servicesAsync;
     final slots = ref.watch(slotProvider);
@@ -756,6 +866,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                   _buildTextField(areaController, "Area Name"),
                   _buildTextField(landmarkController, "Landmark"),
                   _buildTextField(cityController, "City"),
+                  _buildServiceAreaStatus(serviceAreasState),
                   _buildTextField(pinCodeController, "Pin Code",
                       inputType: TextInputType.number),
                   _buildTextField(stateController, "State"),
