@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "207691663784-sp8racku5urip44kvlpuoiik8fjpgcp0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.winiman.timebachao.bookingservice.customer",
+            "certificate_hash": "6b8bc8046a0e1fa80f8724d3d11cc054547fa408"
+          }
+        },
+        {
           "client_id": "207691663784-fc40g12gm8c6fukngftaodh3uv7qcp6v.apps.googleusercontent.com",
           "client_type": 3
         }

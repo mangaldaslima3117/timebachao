@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.winiman.timebachao.bookingservice.partner"
+    namespace = "com.winiman.timebachao.bookingservice.customer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "29.0.13113456"
 
@@ -26,7 +26,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.winiman.timebachao.bookingservice.partner"
+        applicationId = "com.winiman.timebachao.bookingservice.customer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23

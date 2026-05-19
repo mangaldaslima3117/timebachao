@@ -126,20 +126,20 @@ class _CustomerLoginPageState extends ConsumerState<CustomerLoginPage> {
                   ),
                   // App Logo
                   Image.asset(
-                    'assets/images/Time Bachao.png', // Place your generated logo here
+                    'assets/images/timebachaologo_new.png', // Place your generated logo here
                     height: 180,
                   ),
                   const SizedBox(height: 1),
                   // App Name
-                  Text(
-                    'Time Bachao',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal[800],
-                    ),
-                  ),
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+                  // Text(
+                  //   'Time Bachao',
+                  //   style: TextStyle(
+                  //     fontSize: 32,
+                  //     fontWeight: FontWeight.bold,
+                  //     color: Colors.teal[800],
+                  //   ),
+                  // ),
+                  // SizedBox(height: MediaQuery.of(context).size.height * 0.1),
 
                   // Google Sign-In Button
                   // ElevatedButton.icon(

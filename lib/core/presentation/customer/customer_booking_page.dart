@@ -18,7 +18,7 @@ import '../../../services/slots_provider.dart';
 import '../../../services/user_provider.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/common_function.dart';
-import '../../widgets/datewise_slot_selector.dart'; // You must have this
+import '../../widgets/datewise_slot_selector.dart';
 
 class CustomerBookingPage extends ConsumerStatefulWidget {
   final BookingModel? initialBooking;
@@ -32,13 +32,12 @@ class CustomerBookingPage extends ConsumerStatefulWidget {
 class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
   int _currentStep = 0;
 
+  // ── Controllers ────────────────────────────────────────────────────────────
   TextEditingController customerIdController = TextEditingController();
   TextEditingController customerNameController = TextEditingController();
   TextEditingController customerPhoneController = TextEditingController();
   TextEditingController customerGenderController = TextEditingController();
   TextEditingController noteController = TextEditingController();
-
-  //Address fields controller
   TextEditingController houseController = TextEditingController();
   TextEditingController areaController = TextEditingController();
   TextEditingController landmarkController = TextEditingController();
@@ -65,27 +64,41 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
   Map<String, TimeSlotModel> individualSlots = {};
   List<String> sortedDates = [];
 
+  // ── Input decoration ───────────────────────────────────────────────────────
+  final inputDecoration = InputDecoration(
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.teal),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.teal),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.teal, width: 2),
+    ),
+    labelStyle: const TextStyle(color: Colors.teal),
+  );
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
   void _nextStep() {
     bool isValid = false;
-
     if (_currentStep == 0) {
       isValid = customerInfoFormKey.currentState?.validate() ?? false;
     } else {
       isValid = true;
     }
-
     if (isValid) {
-      setState(() {
-        _currentStep += 1;
-      });
+      setState(() => _currentStep += 1);
     }
-    //if (_currentStep < 4) setState(() => _currentStep++);
   }
 
   void _prevStep() {
     if (_currentStep > 0) setState(() => _currentStep--);
   }
 
+  // ── Submit (original customer booking logic preserved) ─────────────────────
   void _submitBooking() async {
     String? duplicateMessage = '';
     final appAccount = ref.read(appAccountProvider);
@@ -93,11 +106,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
 
     if (customerNameController.text.isEmpty ||
         customerPhoneController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill customer information"),
-        ),
-      );
+      _showSnack("Please fill customer information");
       return;
     }
 
@@ -106,23 +115,14 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
         selectedTimeSlot!.startTime.isEmpty ||
         selectedTimeSlot!.endTime.isEmpty ||
         selectedServices.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select date and time slot "),
-        ),
-      );
+      _showSnack("Please select date and time slot");
       return;
     }
 
-    //Validate for address
     if (houseController.text.isEmpty ||
         areaController.text.isEmpty ||
         cityController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter address "),
-        ),
-      );
+      _showSnack("Please enter address");
       return;
     }
 
@@ -151,9 +151,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
       userId: '',
       gender: customerGenderController.text,
       address: address!,
-      appAccountId: appAccount != null
-          ? appAccount.appAccountId
-          : "", // replace with actual admin account ID,
+      appAccountId: appAccount != null ? appAccount.appAccountId : "",
       profileImageUrl: '',
       fcmToken: '',
     );
@@ -166,15 +164,11 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
 
     BookingModel booking = BookingModel(
       bookingId: bookingId,
-      appAccountId: appAccount != null
-          ? appAccount.appAccountId
-          : "", // replace with actual admin account ID
+      appAccountId: appAccount != null ? appAccount.appAccountId : "",
       customerId: customerInfo!.phone.trim(),
       maidId: isBookingExist ? widget.initialBooking!.maid!.id : '',
       services: selectedServices,
-      status: isBookingExist
-          ? widget.initialBooking!.serviceStatus
-          : "1", // Booking
+      status: isBookingExist ? widget.initialBooking!.serviceStatus : "1",
       totalPrice: totalPrice,
       customerAddress: address!,
       bookingDate:
@@ -182,98 +176,120 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
       timeSlot: selectedTimeSlot!,
       note: noteController.text.trim(),
       assignedByAdmin: true,
-      serviceCompletedTime: "", // dummy for now
+      serviceCompletedTime: "",
       serviceCompletedMarkedById: "",
       serviceCompletedMarkedByName: "",
-      serviceStatus: isBookingExist
-          ? widget.initialBooking!.serviceStatus
-          : "1", // Booking
+      serviceStatus:
+          isBookingExist ? widget.initialBooking!.serviceStatus : "1",
       cancellationReason: "",
-      bookedBy: userDtl != null ? userDtl.role.roleType : '',
+      bookedBy: customerInfo!.name,
       maid: isBookingExist
           ? widget.initialBooking!.maid
-          : MaidModel.getDefaultMaid(), // Maid details can be added later
+          : MaidModel.getDefaultMaid(),
       totalTimeTaken:
           isBookingExist ? widget.initialBooking!.totalTimeTaken : '',
       customerInfo: customerInfo!,
       assignedTime: '',
-      assignedBy: '', // This can be set later if needed
-      bookedOn: bookingFormat.format(
-        DateTime.now(),
-      ),
-      commissionPercentage: 0, // Current time as booking time
+      assignedBy: '',
+      bookedOn: bookingFormat.format(DateTime.now()),
+      commissionPercentage: 0,
       paymentInfo: PaymentInfoModel.defaultPayment(),
-      bookingSlots: individualSlots.values
-          .toList(), // Add the selected time slot to the booking
-      startDate: selectedDate != null
-          ? bookingFormat.format(selectedDate!)
-          : "", // Format the date for the booking
+      bookingSlots: individualSlots.values.toList(),
+      startDate:
+          selectedDate != null ? bookingFormat.format(selectedDate!) : "",
       endDate: selectedDate != null
-          ? bookingFormat.format(selectedDate!
-              .add(const Duration(days: 1))) // Assuming end date is next day
-          : "", // Format the date for the booking
+          ? bookingFormat.format(selectedDate!.add(const Duration(days: 1)))
+          : "",
       taxPercentage: appAccount != null ? appAccount.taxPercentage : 0.0,
       parentBookingId: individualSlots.length > 1
           ? DateTime.now().microsecondsSinceEpoch.toString()
-          : '', // Unique ID for parent booking
+          : '',
     );
 
-    if (widget.initialBooking != null &&
-        widget.initialBooking!.bookingId.isNotEmpty) {
+    if (isBookingExist) {
       await ref.read(bookingsProvider.notifier).updateBooking(booking);
     } else {
-      //await ref.read(bookingsProvider.notifier).createBooking(booking);
       duplicateMessage = await ref
           .read(bookingsProvider.notifier)
           .createBookingsBatch(booking);
     }
 
-    if (duplicateMessage.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(duplicateMessage),
-        ),
-      );
+    if (duplicateMessage != null && duplicateMessage.isNotEmpty) {
+      _showSnack(duplicateMessage);
       return;
     }
 
-    // Add or update customer details
-    // This will add or update the customer details in the database
     await ref.read(customerProvider.notifier).addCustomer(booking.customerInfo);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(widget.initialBooking != null &&
-                widget.initialBooking!.bookingId.isNotEmpty
-            ? "Booking Updated !"
-            : "Booking Successfully Created!"),
-      ),
-    );
-    Navigator.pop(context);
+    if (mounted) {
+      _showSnack(isBookingExist ? "Booking Updated!" : "Booking Successfully Created!");
+      Navigator.pop(context);
+    }
   }
 
-  final inputDecoration = InputDecoration(
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.teal),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.teal),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.teal, width: 2),
-    ),
-    labelStyle: const TextStyle(color: Colors.teal),
-  );
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 
+  // ── Date Range Picker ──────────────────────────────────────────────────────
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
+      saveText: 'Done',
+      context: context,
+      firstDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 60)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: Colors.teal,
+                  onPrimary: Colors.white,
+                  surface: Colors.white,
+                  onSurface: Colors.black,
+                ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        startDate = picked.start;
+        endDate = picked.end;
+        selectedTimeSlot = null;
+      });
+    }
+  }
+
+  // ── Date-wise slot customization ───────────────────────────────────────────
+  void _openDateWiseSlotSelection() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DateWiseSlotSelector(
+          startDate: startDate!,
+          endDate: endDate!,
+          selectedSlots: individualSlots,
+          onSlotSelected: (date, slot) {
+            setState(() => individualSlots[date] = slot);
+          },
+        ),
+      ),
+    ).then((_) {
+      setState(() {
+        selectedTimeSlots = individualSlots.values.toList();
+        sortedDates = individualSlots.keys.toList()
+          ..sort((a, b) => DateTime.parse(a).compareTo(DateTime.parse(b)));
+      });
+    });
+  }
+
+  // ── initState (original customer logic preserved) ──────────────────────────
   @override
   void initState() {
     super.initState();
     final customer = ref.read(customerDetailsProvider);
 
-    // Action for new booking
     BookingModel booking = BookingModel.getDefaultBookingModel();
     if (customer.value != null) {
       debugPrint('CUSTOMER INFO');
@@ -282,6 +298,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
       booking.customerAddress = customer.value!.address;
       booking.customerInfo = customer.value!;
     }
+
     houseController =
         TextEditingController(text: booking.customerAddress.houseNumber);
     areaController =
@@ -306,20 +323,19 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
       country: countryController.text.trim(),
     );
 
-    //Set the customer details
     customerNameController.text = booking.customerInfo.name;
     customerPhoneController.text = booking.customerInfo.phone;
-
-    //Set the selected service
     selectedServices = booking.services;
-
-    //Set the time slot and date
     selectedDate = booking.bookingDate;
     selectedTimeSlot = booking.timeSlot;
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType inputType = TextInputType.text}) {
+  // ── Text field builder ─────────────────────────────────────────────────────
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
+    TextInputType inputType = TextInputType.text,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: TextField(
@@ -352,76 +368,561 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
     );
   }
 
-  void _openDateWiseSlotSelection() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DateWiseSlotSelector(
-          startDate: startDate!,
-          endDate: endDate!,
-          selectedSlots: individualSlots,
-          onSlotSelected: (date, slot) {
-            setState(() => individualSlots[date] = slot);
-          },
+  // ── Service Card (from NewBookingPage design) ──────────────────────────────
+  Widget _buildServiceCard(ServiceModel service) {
+    final bool isSelected = selectedServices.any((s) => s.id == service.id);
+    final bool hasProperties = service.numberOfBeds > 0 ||
+        service.numberOfKitchens > 0 ||
+        service.numberOfBalconies > 0 ||
+        service.numberOfFamilyMembers > 0;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            selectedServices.removeWhere((s) => s.id == service.id);
+          } else {
+            selectedServices.add(service);
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.teal.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? Colors.teal : Colors.grey.shade200,
+            width: isSelected ? 1.8 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 22,
+                    height: 22,
+                    margin: const EdgeInsets.only(top: 2, right: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.teal : Colors.transparent,
+                      border: Border.all(
+                        color:
+                            isSelected ? Colors.teal : Colors.grey.shade400,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check,
+                            size: 14, color: Colors.white)
+                        : null,
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.name,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Colors.teal.shade800
+                                : Colors.black87,
+                          ),
+                        ),
+                        if (service.categoryName.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.teal.shade100
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              service.categoryName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isSelected
+                                    ? Colors.teal.shade700
+                                    : Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (service.hasDiscount)
+                        Text(
+                          '₹${service.mrpPrice.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: Colors.grey.shade500,
+                          ),
+                        ),
+                      Text(
+                        '₹${service.finalPrice.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected
+                              ? Colors.teal.shade700
+                              : Colors.teal,
+                        ),
+                      ),
+                      if (service.hasDiscount)
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border:
+                                Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Text(
+                            '${((service.mrpPrice - service.sellingPrice) / service.mrpPrice * 100).round()}% off',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Divider(
+              height: 1,
+              thickness: 0.8,
+              color:
+                  isSelected ? Colors.teal.shade100 : Colors.grey.shade200,
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                children: [
+                  if (service.duration.isNotEmpty) ...[
+                    Icon(Icons.schedule_rounded,
+                        size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${service.duration} hr',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                    if (service.extraPricePerDuration > 0) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        '(+₹${service.extraPricePerDuration.toStringAsFixed(0)}/hr)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 16),
+                  ],
+                  if (service.description.isNotEmpty)
+                    Expanded(
+                      child: Text(
+                        service.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (hasProperties) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+                child: Text(
+                  'Includes',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (service.numberOfBeds > 0)
+                      _PropertyMiniChip(
+                        icon: Icons.bed_rounded,
+                        label:
+                            '${service.numberOfBeds} Bed${service.numberOfBeds > 1 ? 's' : ''}',
+                        price: service.pricePerBed,
+                        isSelected: isSelected,
+                      ),
+                    if (service.numberOfKitchens > 0)
+                      _PropertyMiniChip(
+                        icon: Icons.countertops_rounded,
+                        label:
+                            '${service.numberOfKitchens} Kitchen${service.numberOfKitchens > 1 ? 's' : ''}',
+                        price: service.pricePerKitchen,
+                        isSelected: isSelected,
+                      ),
+                    if (service.numberOfBalconies > 0)
+                      _PropertyMiniChip(
+                        icon: Icons.balcony_rounded,
+                        label:
+                            '${service.numberOfBalconies} Balcon${service.numberOfBalconies > 1 ? 'ies' : 'y'}',
+                        price: service.pricePerBalcony,
+                        isSelected: isSelected,
+                      ),
+                    if (service.numberOfFamilyMembers > 0)
+                      _PropertyMiniChip(
+                        icon: Icons.people_alt_rounded,
+                        label:
+                            '${service.numberOfFamilyMembers} Member${service.numberOfFamilyMembers > 1 ? 's' : ''}',
+                        price: service.pricePerFamilyMember,
+                        isSelected: isSelected,
+                      ),
+                  ],
+                ),
+              ),
+              if (service.propertyTotal > 0)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.teal.shade100
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Base + Add-ons',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isSelected
+                              ? Colors.teal.shade800
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                      Text(
+                        '₹${service.sellingPrice.toStringAsFixed(0)} + ₹${service.propertyTotal.toStringAsFixed(0)} = ₹${service.finalPrice.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? Colors.teal.shade800
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ] else
+              const SizedBox(height: 4),
+          ],
         ),
       ),
-    ).then((value) {
-      // After returning from DateWiseSlotSelector, update the selectedTimeSlots
-      setState(() {
-        selectedTimeSlots = individualSlots.values.toList();
-        sortedDates = individualSlots.keys.toList()
-          ..sort((a, b) => DateTime.parse(a).compareTo(DateTime.parse(b)));
-      });
-    });
-  }
-
-  Future<void> _pickDateRange() async {
-    final picked = await showDateRangePicker(
-      saveText: 'Done',
-      context: context,
-      firstDate: DateTime.now().add(const Duration(days: 1)),
-      lastDate: DateTime.now().add(const Duration(days: 60)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: Colors.teal, // Selection circle + header color
-                  onPrimary: Colors.white, // Text on selected date
-                  surface: Colors.white,
-                  onSurface: Colors.black, // Default text color
-                ),
-          ),
-          child: child!,
-        );
-      },
     );
-    if (picked != null) {
-      setState(() {
-        startDate = picked.start;
-        endDate = picked.end;
-        selectedTimeSlot =
-            null; // Reset selected time slot when date range changes
-      });
-    }
   }
 
+  // ── Selected services summary banner ───────────────────────────────────────
+  Widget _buildSelectedSummary() {
+    if (selectedServices.isEmpty) return const SizedBox.shrink();
+    final total =
+        selectedServices.fold<double>(0.0, (sum, s) => sum + s.finalPrice);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.teal,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded,
+              color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            '${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''} selected',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Total: ₹${total.toStringAsFixed(0)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Confirmation section card ──────────────────────────────────────────────
+  Widget _buildConfirmSection({
+    required String title,
+    required List<_ConfirmRow> rows,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.teal,
+              ),
+            ),
+          ),
+          const Divider(height: 1, thickness: 0.8),
+          ...rows.map((row) => Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 7),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      child: Text(
+                        row.label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        row.value,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  // ── Confirmation services section card ─────────────────────────────────────
+  Widget _buildConfirmServicesSection() {
+    final subtotal =
+        selectedServices.fold<double>(0.0, (sum, s) => sum + s.finalPrice);
+    final int dayCount =
+        individualSlots.isNotEmpty ? individualSlots.length : 1;
+    final total = subtotal * dayCount;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Text(
+              "Service Details",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.teal,
+              ),
+            ),
+          ),
+          const Divider(height: 1, thickness: 0.8),
+          ...selectedServices.map((service) => Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 7),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            service.name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '₹${service.hasDiscount ? service.finalPrice.toStringAsFixed(0) : service.mrpPrice.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (service.hasDiscount)
+                      Text(
+                        'MRP ₹${service.mrpPrice.toStringAsFixed(0)}  •  Save ₹${(service.mrpPrice - service.finalPrice).toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.green.shade600,
+                        ),
+                      ),
+                    if (service.duration.isNotEmpty)
+                      Text(
+                        'Duration: ${service.duration} hr',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                  ],
+                ),
+              )),
+          const Divider(height: 1, thickness: 0.8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Subtotal',
+                    style: TextStyle(
+                        fontSize: 13, color: Colors.grey.shade600)),
+                Text('₹${subtotal.toStringAsFixed(0)}',
+                    style: const TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+          if (dayCount > 1)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '× $dayCount days',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                  const SizedBox(),
+                ],
+              ),
+            ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
+                ),
+                Text(
+                  '₹${total.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final servicesAsync = ref.watch(maidServiceProvider);
-    final customers = ref.read(customerProvider);
-    List<ServiceModel> services = servicesAsync;
     final slots = ref.watch(slotProvider);
     final slotAsync = ref.watch(slotStreamProvider);
-    //final timeSlots = TimeSlotModel.generateDefaultTimeSlots();
-    final timeSlots = slots;
-    debugPrint('CUSTOMERS ${customers.length}');
+    final List<ServiceModel> services = servicesAsync;
+    final timeSlots = slots.where((slot) => slot.isAvailable).toList();
+
     bool isSameDay = startDate != null &&
         endDate != null &&
         AppConstants.isSameDay(startDate!, endDate!);
-    debugPrint('SAME DAY: $isSameDay, Start: $startDate, End: $endDate');
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0.5,
+        shadowColor: Colors.grey.shade300,
         title: Column(
           children: [
             Text(
@@ -435,20 +936,16 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
             if (widget.initialBooking != null)
               Text(
                 "Booking #${widget.initialBooking!.bookingId}",
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.teal,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.teal),
               ),
           ],
         ),
       ),
       body: Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary:
-                    Colors.teal, // Active/complete step color (circle + text)
-              ),
+          colorScheme: Theme.of(context)
+              .colorScheme
+              .copyWith(primary: Colors.teal),
         ),
         child: Stepper(
           type: StepperType.vertical,
@@ -462,7 +959,7 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                 ElevatedButton(
                   onPressed: details.onStepContinue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal.shade300,
+                    backgroundColor: Colors.teal.shade400,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
@@ -470,10 +967,8 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                         horizontal: 24, vertical: 12),
                   ),
                   child: Text(
-                    _currentStep == 4 ? "Submit" : "Next",
-                    style: const TextStyle(
-                      color: Colors.white,
-                    ),
+                    _currentStep == 4 ? "Submit Booking" : "Next",
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -495,7 +990,8 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
             );
           },
           steps: [
-            // Step 1: Customer Info
+            // ── Step 1: Customer Info ──────────────────────────────────
+            // Read-only fields — data comes from customerDetailsProvider
             Step(
               title: const Text("Customer Info"),
               isActive: _currentStep >= 0,
@@ -509,35 +1005,28 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                         controller: customerPhoneController,
                         autofocus: false,
                         readOnly: true,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
+                        decoration: inputDecoration.copyWith(
                           labelText: 'Customer Phone',
+                          prefixIcon: const Icon(Icons.phone_outlined,
+                              color: Colors.teal),
                         ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Phone number is required";
+                          }
+                          return null;
+                        },
                       ),
-                      // child: TextFormField(
-                      //   controller: customerPhoneController,
-                      //   decoration: inputDecoration.copyWith(
-                      //     labelText: "Customer Phone",
-                      //   ),
-                      //   keyboardType: TextInputType.number,
-                      //   validator: (value) {
-                      //     if (value == null || value.isEmpty) {
-                      //       return "Enter phone number";
-                      //     }
-                      //     if (value.length != 10) {
-                      //       return "Enter 10 digit phone number";
-                      //     }
-                      //     return null;
-                      //   },
-                      // ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: TextFormField(
-                        readOnly: true,
                         controller: customerNameController,
+                        readOnly: true,
                         decoration: inputDecoration.copyWith(
                           labelText: "Customer Name",
+                          prefixIcon: const Icon(Icons.person_outline,
+                              color: Colors.teal),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -551,80 +1040,50 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                 ),
               ),
             ),
-            // Step 2: Services
+
+            // ── Step 2: Services ───────────────────────────────────────
             Step(
               title: const Text("Services"),
               isActive: _currentStep >= 1,
               content: services.isEmpty
-                  ? const CircularProgressIndicator() // or a message
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child:
+                            CircularProgressIndicator(color: Colors.teal),
+                      ),
+                    )
                   : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ...services.map((service) {
-                          bool isSelected =
-                              selectedServices.any((s) => s.id == service.id);
-                          //final isSelected = selectedServices.contains(service);
-                          return CheckboxListTile(
-                            title: Text(service.name),
-                            subtitle: service.hasDiscount
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '₹${service.finalPrice.toStringAsFixed(0)}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        width: 10,
-                                      ),
-                                      Text(
-                                        '₹${service.mrpPrice.toStringAsFixed(0)}',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade400,
-                                          fontSize: 14,
-                                          decoration:
-                                              TextDecoration.lineThrough,
-                                          decorationColor: Colors.red.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    '₹${service.mrpPrice.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                            value: isSelected,
-                            onChanged: (selected) {
-                              debugPrint('SERVICE UNCHECKED $selected');
-                              setState(() {
-                                if (selected!) {
-                                  selectedServices.add(service);
-                                } else {
-                                  selectedServices
-                                      .removeWhere((s) => s.id == service.id);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
+                        _buildSelectedSummary(),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            'Choose one or more services',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                        ...services.map(_buildServiceCard),
                       ],
                     ),
             ),
-            // Step 3: Date and Time
+
+            // ── Step 3: Date & Time ────────────────────────────────────
             Step(
               title: const Text("Date & Time"),
               isActive: _currentStep >= 2,
               content: Column(
                 children: [
                   ListTile(
+                    contentPadding: EdgeInsets.zero,
                     title: startDate != null && endDate != null
                         ? Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 DateFormat('dd-MM-yyyy').format(startDate!),
@@ -643,33 +1102,13 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                   ),
-                                )
+                                ),
                             ],
                           )
                         : const Text("Select Booking Date"),
-                    trailing: const Icon(
-                      Icons.calendar_today,
-                      color: Colors.teal,
-                    ),
-                    onTap: () async {
-                      // final picked = await showDatePicker(
-                      //   context: context,
-                      //   initialDate:
-                      //       DateTime.now().add(const Duration(days: 1)),
-                      //   firstDate: DateTime.now(),
-                      //   lastDate: DateTime.now().add(const Duration(days: 365)),
-                      // );
-
-                      // if (picked != null) {
-                      //   setState(() {
-                      //     selectedDate = picked;
-                      //     selectedTimeSlot =
-                      //         null; // Reset time slot on date change
-                      //   });
-                      // }
-
-                      _pickDateRange();
-                    },
+                    trailing: const Icon(Icons.calendar_today,
+                        color: Colors.teal),
+                    onTap: _pickDateRange,
                   ),
                   const SizedBox(height: 8),
                   const Text("Select Time Slot"),
@@ -680,28 +1119,25 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                       slot.serviceDate = selectedDate != null
                           ? bookingFormat.format(selectedDate!)
                           : "";
-                      bool isDisabled = isSlotExpiredDateRange(
-                        slot,
-                        startDate!, // Use startDate for consistency
-                      );
-                      debugPrint(
-                          'Slot: ${slot.startTime} - ${slot.endTime}, Disabled: $isDisabled');
-
+                      bool isDisabled =
+                          isSlotExpiredDateRange(slot, startDate!);
                       bool isSelected = !isDisabled &&
                           selectedTimeSlot != null &&
-                          slot.startTime == selectedTimeSlot!.startTime &&
+                          slot.startTime ==
+                              selectedTimeSlot!.startTime &&
                           slot.endTime == selectedTimeSlot!.endTime;
-                      debugPrint(
-                          'Selected Time Slot: ${selectedTimeSlot?.startTime} - ${selectedTimeSlot?.endTime}, Current Slot: ${slot.startTime} - ${slot.endTime}, Is Selected: $isSelected');
                       return ChoiceChip(
-                        disabledColor: isDisabled ? Colors.grey.shade200 : null,
+                        disabledColor:
+                            isDisabled ? Colors.grey.shade200 : null,
                         selectedColor: Colors.teal,
                         checkmarkColor:
                             isSelected ? Colors.white : Colors.black,
                         label: Text(
                           "${slot.startTime} - ${slot.endTime}",
                           style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.black,
                             fontSize: 14,
                           ),
                         ),
@@ -710,31 +1146,17 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                             ? null
                             : (_) => setState(() {
                                   selectedTimeSlot = slot;
-
-                                  individualSlots = generateSlotMapForRange(
+                                  individualSlots =
+                                      generateSlotMapForRange(
                                     startDate: startDate!,
                                     endDate: endDate!,
                                     selectedSlot: slot,
                                   );
-                                  debugPrint('MAP VALUE');
-                                  individualSlots.forEach((key, value) {
-                                    debugPrint(
-                                        'Date: $key, Slot: ${value.startTime} - ${value.endTime}');
-                                  });
-
-                                  // debugPrint(
-                                  //     'Selected Slot: ${slot.startTime} - ${slot.endTime}, Date: ${slot.serviceDate}');
                                 }),
                       );
                     }).toList(),
                   ),
-
-                  //UNCOMMENT BELOW CODE IF YOU WANT TO USE DATEWISE SLOT SELECTION
                   const SizedBox(height: 10),
-                  if (!isSameDay)
-                    const SizedBox(
-                      height: 10,
-                    ),
                   if (!isSameDay &&
                       selectedTimeSlot != null &&
                       individualSlots.isNotEmpty)
@@ -746,7 +1168,8 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                 ],
               ),
             ),
-            // Step 4: Address
+
+            // ── Step 4: Address ────────────────────────────────────────
             Step(
               title: const Text("Address"),
               isActive: _currentStep >= 3,
@@ -763,7 +1186,8 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                 ],
               ),
             ),
-            // Step 5: Note & Confirm
+
+            // ── Step 5: Confirmation ───────────────────────────────────
             Step(
               title: const Text("Confirmation"),
               isActive: _currentStep >= 4,
@@ -771,128 +1195,66 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (individualSlots.length > 1)
-                    const Text(
-                      "Individual booking will be created for each date.",
-                      style: TextStyle(fontSize: 14, color: Colors.red),
-                    ),
-                  const Text(
-                    "Please review your booking details before submitting.",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Customer Details",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.left,
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: Colors.orange.shade200),
                       ),
-                      const SizedBox(height: 5),
-                      const Divider(height: 1),
-                      const SizedBox(height: 5),
-                      Text("Name:     ${customerNameController.text}"),
-                      Text("Phone:    ${customerPhoneController.text}"),
-                      Text(
-                          "Address:  ${address!.houseNumber.isNotEmpty ? address!.toString() : "Not provided"}"),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  const Divider(height: 1),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Booking Date & Time",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: 5),
-                  const Divider(height: 1),
-                  const SizedBox(height: 5),
-                  ...individualSlots.keys.toList().map((dateStr) {
-                    final slot = individualSlots[dateStr]!;
-                    // final formattedDate = DateFormat('dd-MM-yyyy')
-                    //     .format(DateTime.parse(dateStr));
-
-                    return Text(
-                      "$dateStr,  Time : ${slot.startTime} - ${slot.endTime}",
-                      style: const TextStyle(
-                        fontSize: 14,
-                      ),
-                    );
-                  }).toList(),
-                  const SizedBox(height: 5),
-                  const Divider(height: 1),
-                  const SizedBox(height: 5),
-                  const Text(
-                    "Service Details",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.left,
-                  ),
-                  const SizedBox(height: 5),
-                  const Divider(height: 1),
-                  const SizedBox(height: 5),
-                  ...selectedServices.map((service) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.35,
-                          child: Text(
-                            service.name,
-                            softWrap: true,
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.orange.shade700, size: 16),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              "Individual bookings will be created for each date.",
+                              style: TextStyle(fontSize: 13),
+                            ),
                           ),
-                        ),
-                        Text(
-                            "₹${service.hasDiscount ? service.finalPrice.toStringAsFixed(0) : service.mrpPrice.toStringAsFixed(0)}"),
-                      ],
-                    );
-                  }).toList(),
-                  Row(
-                    children: [
-                      const Spacer(),
-                      Text(
-                        "Sub Total : ₹${selectedServices.fold(0, (sum, s) => sum.toInt() + s.finalPrice.toInt()).toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          fontSize: 14,
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  const Divider(height: 1),
-                  Row(
-                    children: [
-                      const Spacer(),
-                      Text(
-                        "Total : ₹${(individualSlots.length * selectedServices.fold(0, (sum, s) => sum.toInt() + (s.hasDiscount ? s.finalPrice : s.mrpPrice).toInt())).toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (individualSlots.length > 1)
-                    Row(
-                      children: [
-                        const Spacer(),
-                        Text(
-                          "Price calculated for ${individualSlots.length} days",
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
                     ),
-                  const SizedBox(height: 5),
+                  const Text(
+                    "Review your booking details before submitting.",
+                    style:
+                        TextStyle(fontSize: 15, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildConfirmSection(
+                    title: "Customer Details",
+                    rows: [
+                      _ConfirmRow(
+                          label: "Name",
+                          value: customerNameController.text),
+                      _ConfirmRow(
+                          label: "Phone",
+                          value: customerPhoneController.text),
+                      _ConfirmRow(
+                        label: "Address",
+                        value: address!.houseNumber.isNotEmpty
+                            ? address!.toString()
+                            : "Not provided",
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildConfirmSection(
+                    title: "Booking Date & Time",
+                    rows: individualSlots.keys.toList().map((dateStr) {
+                      final slot = individualSlots[dateStr]!;
+                      return _ConfirmRow(
+                        label: dateStr,
+                        value: "${slot.startTime} - ${slot.endTime}",
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildConfirmServicesSection(),
+                  const SizedBox(height: 14),
                   TextField(
                     controller: noteController,
                     decoration: inputDecoration.copyWith(
@@ -906,6 +1268,76 @@ class _CustomerBookingPageState extends ConsumerState<CustomerBookingPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Helper classes ────────────────────────────────────────────────────────
+
+class _ConfirmRow {
+  final String label;
+  final String value;
+  const _ConfirmRow({required this.label, required this.value});
+}
+
+class _PropertyMiniChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double price;
+  final bool isSelected;
+
+  const _PropertyMiniChip({
+    required this.icon,
+    required this.label,
+    required this.price,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.teal.shade50 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color:
+              isSelected ? Colors.teal.shade200 : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon,
+              size: 13,
+              color: isSelected
+                  ? Colors.teal.shade600
+                  : Colors.grey.shade600),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: isSelected
+                  ? Colors.teal.shade700
+                  : Colors.grey.shade700,
+            ),
+          ),
+          if (price > 0) ...[
+            const SizedBox(width: 4),
+            Text(
+              '+₹${price.toStringAsFixed(0)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: isSelected
+                    ? Colors.teal.shade600
+                    : Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
