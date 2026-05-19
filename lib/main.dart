@@ -2,12 +2,9 @@ import 'package:bookmyservice/core/presentation/customer/customer_details_page.d
 import 'package:bookmyservice/core/presentation/customer/customer_login_page.dart';
 import 'package:bookmyservice/core/utils/app_constants.dart';
 import 'package:bookmyservice/core/widgets/app_initializer.dart';
-import 'package:bookmyservice/firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -235,6 +232,13 @@ class CustomerApp extends ConsumerStatefulWidget {
 }
 
 class _CustomerAppState extends ConsumerState<CustomerApp> {
+  bool _hasAddress(CustomerModel customer) {
+    final address = customer.address;
+    return address.houseNumber.trim().isNotEmpty &&
+        address.areaName.trim().isNotEmpty &&
+        address.city.trim().isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -293,8 +297,6 @@ class _CustomerAppState extends ConsumerState<CustomerApp> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     ref.watch(customerDetailsProvider);
-    final customerNotifier = ref.read(customerProvider.notifier);
-    final user = FirebaseAuth.instance.currentUser;
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -327,10 +329,12 @@ class _CustomerAppState extends ConsumerState<CustomerApp> {
 
               final customer = snapshot.data;
 
-              // If customer does not exist, add a new one
-              if (customer == null || customer.id.isEmpty) {
+              // If customer does not exist or has no usable address, collect details.
+              if (customer == null ||
+                  customer.id.isEmpty ||
+                  !_hasAddress(customer)) {
                 return CustomerDetailsPage(
-                  customer: CustomerModel.getDefaultCustomer(),
+                  customer: customer ?? CustomerModel.getDefaultCustomer(),
                 );
               }
 

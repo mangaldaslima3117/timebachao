@@ -4,7 +4,6 @@ import 'package:bookmyservice/core/presentation/customer/customer_welcome_page.d
 import 'package:bookmyservice/core/presentation/customer/map_address_selection.dart';
 import 'package:bookmyservice/services/authentication_provider.dart';
 import 'package:bookmyservice/services/customer_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,16 +11,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/customer_model.dart';
 import '../../../models/address_model.dart';
+import '../../../models/service_area_model.dart';
+import '../../../services/service_area_provider.dart';
 
 // ── Design Tokens (shared with CustomerLoginPage) ─────────────────────────────
 class _C {
   static const teal = Color(0xFF0FA97A);
   static const tealDark = Color(0xFF097A59);
-  static const tealDeep = Color(0xFF054D38);
   static const tealLight = Color(0xFFD4F5EB);
   static const tealMid = Color(0xFF1DC995);
   static const bg = Color(0xFFF5FAF8);
-  static const surface = Colors.white;
   static const textPrimary = Color(0xFF0D1F1A);
   static const textSecondary = Color(0xFF5C7A6E);
   static const border = Color(0xFFD0EBE2);
@@ -135,6 +134,7 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
   Future<void> _saveCustomerData() async {
     final customerP = ref.read(customerProvider.notifier);
     if (!_formKey.currentState!.validate()) return;
+    if (!_ensureServiceableArea()) return;
 
     setState(() => _isLoading = true);
 
@@ -161,9 +161,8 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
       ),
       appAccountId: '',
       profileImageUrl: '',
-      fcmToken: widget.customer.fcmToken!.isNotEmpty
-          ? widget.customer.fcmToken
-          : '',
+      fcmToken:
+          widget.customer.fcmToken!.isNotEmpty ? widget.customer.fcmToken : '',
     );
 
     if (widget.customer.id.isNotEmpty) {
@@ -171,7 +170,6 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
     } else {
       await customerP.addCustomer(customer);
     }
-    customerP.addCustomer(customer);
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -217,14 +215,12 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
   }
 
   void _pickAddressFromMap() {
-    final authService = ref.read(authServiceProvider);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => MapAddressSelectorScreen()),
     ).then((dynamic selectedAddress) {
       debugPrint('Selected address In Detail: ${selectedAddress.toString()}');
-      if (selectedAddress != null &&
-          selectedAddress.houseNumber.isNotEmpty) {
+      if (selectedAddress != null && selectedAddress.houseNumber.isNotEmpty) {
         setState(() {
           houseController.text = selectedAddress.houseNumber;
           areaController.text = selectedAddress.areaName;
@@ -238,10 +234,263 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
     } as FutureOr Function(dynamic value));
   }
 
+  bool _ensureServiceableArea() {
+    final city = cityController.text.trim();
+    final area = areaController.text.trim();
+    final serviceAreas = ref.read(serviceAreaProvider).maybeWhen(
+          data: (areas) => areas,
+          orElse: () => null,
+        );
+
+    if (serviceAreas == null) {
+      _showSnack('Please wait while service areas load', error: true);
+      return false;
+    }
+
+    if (ServiceAreaModel.isServiceableArea(serviceAreas, city, area)) {
+      return true;
+    }
+
+    _showSnack(
+      'Coming soon in $area, $city. We do not service this area yet.',
+      error: true,
+    );
+    return false;
+  }
+
+  List<String> _activeCities(List<ServiceAreaModel> serviceAreas) {
+    final cities = serviceAreas
+        .where((area) => area.isServiceable)
+        .map((area) => area.city)
+        .where((city) => city.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    final currentCity = cityController.text.trim();
+    if (currentCity.isNotEmpty &&
+        !cities.any((city) =>
+            ServiceAreaModel.normalizeKey(city) ==
+            ServiceAreaModel.normalizeKey(currentCity))) {
+      cities.add(currentCity);
+    }
+
+    return cities;
+  }
+
+  List<String> _activeAreasForSelectedCity(
+    List<ServiceAreaModel> serviceAreas,
+  ) {
+    final activeAreas = ServiceAreaModel.activeAreaNamesForCity(
+      serviceAreas,
+      cityController.text,
+    );
+    final currentArea = areaController.text.trim();
+
+    if (currentArea.isNotEmpty &&
+        !activeAreas.any((area) =>
+            ServiceAreaModel.normalizeKey(area) ==
+            ServiceAreaModel.normalizeKey(currentArea))) {
+      activeAreas.add(currentArea);
+    }
+
+    return activeAreas;
+  }
+
+  String? _dropdownValue(String value, List<String> options) {
+    final normalizedValue = ServiceAreaModel.normalizeKey(value);
+    if (normalizedValue.isEmpty) return null;
+
+    for (final option in options) {
+      if (ServiceAreaModel.normalizeKey(option) == normalizedValue) {
+        return option;
+      }
+    }
+
+    return null;
+  }
+
+  InputDecoration _dropdownDecoration({
+    required String label,
+    required IconData icon,
+    required String hint,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(
+        fontSize: 13,
+        color: _C.textSecondary,
+        fontWeight: FontWeight.w500,
+      ),
+      prefixIcon: Padding(
+        padding: const EdgeInsets.only(left: 14, right: 10),
+        child: Icon(icon, size: 18, color: _C.teal),
+      ),
+      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      filled: true,
+      fillColor: const Color(0xFFF7FDFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _C.border, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _C.border, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _C.teal, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _C.errorRed, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _C.errorRed, width: 2),
+      ),
+    );
+  }
+
+  Widget _buildCityDropdown(List<ServiceAreaModel>? serviceAreas) {
+    final isLoading = serviceAreas == null;
+    final cities = isLoading ? <String>[] : _activeCities(serviceAreas);
+
+    return DropdownButtonFormField<String>(
+      value: _dropdownValue(cityController.text, cities),
+      isExpanded: true,
+      decoration: _dropdownDecoration(
+        label: 'City',
+        icon: Icons.location_city_outlined,
+        hint: isLoading ? 'Loading cities' : 'Select City',
+      ),
+      items: cities
+          .map(
+            (city) => DropdownMenuItem(
+              value: city,
+              child: Text(city),
+            ),
+          )
+          .toList(),
+      onChanged: isLoading || cities.isEmpty
+          ? null
+          : (value) {
+              if (value == null) return;
+
+              setState(() {
+                cityController.text = value;
+                areaController.clear();
+              });
+            },
+      validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+    );
+  }
+
+  Widget _buildAreaDropdown(List<ServiceAreaModel>? serviceAreas) {
+    final isLoading = serviceAreas == null;
+    final areas =
+        isLoading ? <String>[] : _activeAreasForSelectedCity(serviceAreas);
+    final city = cityController.text.trim();
+
+    return DropdownButtonFormField<String>(
+      value: _dropdownValue(areaController.text, areas),
+      isExpanded: true,
+      decoration: _dropdownDecoration(
+        label: 'Area / Locality',
+        icon: Icons.map_outlined,
+        hint: city.isEmpty ? 'Select city first' : 'Select Area',
+      ),
+      items: areas
+          .map(
+            (area) => DropdownMenuItem(
+              value: area,
+              child: Text(area),
+            ),
+          )
+          .toList(),
+      onChanged: isLoading || city.isEmpty || areas.isEmpty
+          ? null
+          : (value) {
+              if (value == null) return;
+
+              setState(() {
+                areaController.text = value;
+              });
+            },
+      validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+    );
+  }
+
+  Widget _buildServiceAreaStatus(
+    AsyncValue<List<ServiceAreaModel>> serviceAreasState,
+  ) {
+    final city = cityController.text.trim();
+    final area = areaController.text.trim();
+
+    if (city.isEmpty || area.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final serviceAreas = serviceAreasState.valueOrNull;
+    if (serviceAreas == null) {
+      return _buildAreaStatusBanner(
+        icon: Icons.schedule_outlined,
+        message: 'Checking service availability...',
+        color: Colors.grey,
+      );
+    }
+
+    final isServiceable =
+        ServiceAreaModel.isServiceableArea(serviceAreas, city, area);
+
+    return _buildAreaStatusBanner(
+      icon: isServiceable ? Icons.check_circle_outline : Icons.block_outlined,
+      message: isServiceable
+          ? 'Service is available in $area, $city'
+          : 'Coming soon in $area, $city',
+      color: isServiceable ? Colors.green : _C.errorRed,
+    );
+  }
+
+  Widget _buildAreaStatusBanner({
+    required IconData icon,
+    required String message,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final authService = ref.watch(authServiceProvider);
+    final serviceAreasState = ref.watch(serviceAreaProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -452,8 +701,7 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                               child: Form(
                                 key: _formKey,
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // ── Section: Personal Info ───────────
                                     _SectionHeader(
@@ -482,8 +730,7 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                       controller: emailController,
                                       label: 'Email Address',
                                       icon: Icons.mail_outline_rounded,
-                                      inputType:
-                                          TextInputType.emailAddress,
+                                      inputType: TextInputType.emailAddress,
                                       validator: (v) =>
                                           v == null || v.trim().isEmpty
                                               ? 'Email is required'
@@ -511,18 +758,15 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                         GestureDetector(
                                           onTap: _pickAddressFromMap,
                                           child: Container(
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
                                             decoration: BoxDecoration(
                                               color: _C.tealLight,
                                               borderRadius:
                                                   BorderRadius.circular(20),
                                             ),
                                             child: const Row(
-                                              mainAxisSize:
-                                                  MainAxisSize.min,
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Icon(Icons.pin_drop_rounded,
                                                     size: 14,
@@ -532,8 +776,7 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                                   'Pick on Map',
                                                   style: TextStyle(
                                                     fontSize: 12,
-                                                    fontWeight:
-                                                        FontWeight.w600,
+                                                    fontWeight: FontWeight.w600,
                                                     color: _C.tealDark,
                                                   ),
                                                 ),
@@ -549,8 +792,7 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                     _AddressLabelSelector(
                                       selected: _addressLabel,
                                       onSelected: (label) =>
-                                          setState(() =>
-                                              _addressLabel = label),
+                                          setState(() => _addressLabel = label),
                                     ),
                                     const SizedBox(height: 16),
 
@@ -564,30 +806,22 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                               : null,
                                     ),
                                     const SizedBox(height: 14),
-                                    _StyledField(
-                                      controller: areaController,
-                                      label: 'Area / Locality',
-                                      icon: Icons.map_outlined,
-                                      validator: (v) =>
-                                          v == null || v.trim().isEmpty
-                                              ? 'Required'
-                                              : null,
+                                    _buildCityDropdown(
+                                      serviceAreasState.valueOrNull,
                                     ),
                                     const SizedBox(height: 14),
+                                    _buildAreaDropdown(
+                                      serviceAreasState.valueOrNull,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    _buildServiceAreaStatus(serviceAreasState),
+                                    if (cityController.text.trim().isNotEmpty &&
+                                        areaController.text.trim().isNotEmpty)
+                                      const SizedBox(height: 14),
                                     _StyledField(
                                       controller: landController,
                                       label: 'Landmark',
                                       icon: Icons.place_outlined,
-                                      validator: (v) =>
-                                          v == null || v.trim().isEmpty
-                                              ? 'Required'
-                                              : null,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    _StyledField(
-                                      controller: cityController,
-                                      label: 'City',
-                                      icon: Icons.location_city_outlined,
                                       validator: (v) =>
                                           v == null || v.trim().isEmpty
                                               ? 'Required'
@@ -600,8 +834,7 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                       icon: Icons.pin_outlined,
                                       inputType: TextInputType.number,
                                       inputFormatters: [
-                                        FilteringTextInputFormatter
-                                            .digitsOnly,
+                                        FilteringTextInputFormatter.digitsOnly,
                                       ],
                                       validator: (v) =>
                                           v == null || v.trim().isEmpty
@@ -643,8 +876,8 @@ class _CustomerDetailsPageState extends ConsumerState<CustomerDetailsPage>
                                         'Your information is secure 🔒',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: _C.textSecondary
-                                              .withOpacity(0.7),
+                                          color:
+                                              _C.textSecondary.withOpacity(0.7),
                                         ),
                                       ),
                                     ),
@@ -698,8 +931,7 @@ class _AddressLabelSelector extends StatelessWidget {
               margin: EdgeInsets.only(
                 right: label == 'Other' ? 0 : 8,
               ),
-              padding:
-                  const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
               decoration: BoxDecoration(
                 color: isSelected ? _C.tealLight : const Color(0xFFF7FDFB),
                 borderRadius: BorderRadius.circular(14),
@@ -721,11 +953,9 @@ class _AddressLabelSelector extends StatelessWidget {
                     label,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color:
-                          isSelected ? _C.tealDark : _C.textSecondary,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? _C.tealDark : _C.textSecondary,
                     ),
                   ),
                 ],
@@ -822,14 +1052,11 @@ class _StyledField extends StatelessWidget {
               size: 18,
               color: enabled ? _C.teal : _C.textSecondary.withOpacity(0.5)),
         ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 0, minHeight: 0),
+        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
-        fillColor: enabled
-            ? const Color(0xFFF7FDFB)
-            : const Color(0xFFF0F4F2),
+        fillColor: enabled ? const Color(0xFFF7FDFB) : const Color(0xFFF0F4F2),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: _C.border, width: 1.5),
@@ -840,8 +1067,7 @@ class _StyledField extends StatelessWidget {
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide:
-              const BorderSide(color: Color(0xFFDDE8E4), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFDDE8E4), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -849,8 +1075,7 @@ class _StyledField extends StatelessWidget {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide:
-              const BorderSide(color: Color(0xFFC0392B), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFC0392B), width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -892,8 +1117,7 @@ class _GenderDropdown extends StatelessWidget {
           padding: EdgeInsets.only(left: 14, right: 10),
           child: Icon(Icons.wc_outlined, size: 18, color: _C.teal),
         ),
-        prefixIconConstraints:
-            const BoxConstraints(minWidth: 0, minHeight: 0),
+        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         filled: true,
@@ -969,8 +1193,7 @@ class _GradientButton extends StatelessWidget {
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor:
-                        AlwaysStoppedAnimation(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
                   ),
                 )
               : Row(
