@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:bookmyservice/models/payment_info_model.dart';
 import 'package:bookmyservice/services/app_account_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:intl/intl.dart';
@@ -13,10 +12,12 @@ import '../../../models/booking_model.dart';
 import '../../../models/customer_model.dart';
 import '../../../models/maid_model.dart';
 import '../../../models/service_model.dart';
+import '../../../models/service_area_model.dart';
 import '../../../models/slot_model.dart';
 import '../../../services/bookings_provider.dart';
 import '../../../services/customer_provider.dart';
 import '../../../services/service_provider.dart';
+import '../../../services/service_area_provider.dart';
 import '../../../services/slots_provider.dart';
 import '../../../services/user_provider.dart';
 import '../../utils/app_constants.dart';
@@ -120,6 +121,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       _showSnack("Please enter address");
       return;
     }
+    if (!_ensureServiceableArea()) {
+      return;
+    }
 
     final isBookingExist = widget.initialBooking != null &&
         widget.initialBooking!.bookingId.isNotEmpty;
@@ -205,7 +209,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       parentBookingId: individualSlots.length > 1
           ? DateTime.now().microsecondsSinceEpoch.toString()
           : '',
-      otp: _generatedOtp, // ✅ stored in booking
+      otp: otp,
     );
 
     if (isBookingExist) {
@@ -224,6 +228,40 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  String _defaultStateIfEmpty(String value) {
+    return value.trim().isEmpty ? AddressModel.defaultState : value;
+  }
+
+  String _defaultCountryIfEmpty(String value) {
+    return value.trim().isEmpty ? AddressModel.defaultCountry : value;
+  }
+
+  bool _ensureServiceableArea() {
+    final city = cityController.text.trim();
+    final area = areaController.text.trim();
+    final serviceAreas = ref.read(serviceAreaProvider).maybeWhen(
+          data: (areas) => areas,
+          orElse: () => null,
+        );
+
+    if (serviceAreas == null) {
+      _showSnack("Please wait while service areas load");
+      return false;
+    }
+
+    if (ServiceAreaModel.isServiceableArea(serviceAreas, city, area)) {
+      return true;
+    }
+
+    final activeAreas =
+        ServiceAreaModel.activeAreaNamesForCity(serviceAreas, city);
+    final hint = activeAreas.isEmpty
+        ? " No active areas found for $city."
+        : " Available in $city: ${activeAreas.take(5).join(', ')}.";
+    _showSnack("Service is not available in $area, $city.$hint");
+    return false;
   }
 
   // ── Input decoration ───────────────────────────────────────────────────────
@@ -285,9 +323,11 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
       pinCodeController = TextEditingController(
           text: widget.initialBooking!.customerAddress.pinCode);
       stateController = TextEditingController(
-          text: widget.initialBooking!.customerAddress.state);
+          text: _defaultStateIfEmpty(
+              widget.initialBooking!.customerAddress.state));
       countryController = TextEditingController(
-          text: widget.initialBooking!.customerAddress.country);
+          text: _defaultCountryIfEmpty(
+              widget.initialBooking!.customerAddress.country));
       address = AddressModel(
         houseNumber: houseController.text.trim(),
         areaName: areaController.text.trim(),
@@ -314,10 +354,11 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
         landmark: "",
         city: "",
         pinCode: "",
-        state: "",
-        country: "India",
+        state: AddressModel.defaultState,
+        country: AddressModel.defaultCountry,
       );
-      countryController.text = "India";
+      stateController.text = AddressModel.defaultState;
+      countryController.text = AddressModel.defaultCountry;
       customerInfo = CustomerModel.getDefaultCustomer();
       customerInfo!.address = address!;
       selectedTimeSlot = TimeSlotModel.defaultTimeSlot();
@@ -358,6 +399,196 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
             }
           });
         },
+      ),
+    );
+  }
+
+  List<String> _activeCities(List<ServiceAreaModel> serviceAreas) {
+    final cities = serviceAreas
+        .where((area) => area.isServiceable)
+        .map((area) => area.city)
+        .where((city) => city.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    final currentCity = cityController.text.trim();
+    if (currentCity.isNotEmpty &&
+        !cities.any((city) =>
+            ServiceAreaModel.normalizeKey(city) ==
+            ServiceAreaModel.normalizeKey(currentCity))) {
+      cities.add(currentCity);
+    }
+
+    return cities;
+  }
+
+  List<String> _activeAreasForSelectedCity(
+    List<ServiceAreaModel> serviceAreas,
+  ) {
+    final activeAreas = ServiceAreaModel.activeAreaNamesForCity(
+      serviceAreas,
+      cityController.text,
+    );
+    final currentArea = areaController.text.trim();
+
+    if (currentArea.isNotEmpty &&
+        !activeAreas.any((area) =>
+            ServiceAreaModel.normalizeKey(area) ==
+            ServiceAreaModel.normalizeKey(currentArea))) {
+      activeAreas.add(currentArea);
+    }
+
+    return activeAreas;
+  }
+
+  String? _dropdownValue(String value, List<String> options) {
+    final normalizedValue = ServiceAreaModel.normalizeKey(value);
+    if (normalizedValue.isEmpty) return null;
+
+    for (final option in options) {
+      if (ServiceAreaModel.normalizeKey(option) == normalizedValue) {
+        return option;
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildCityDropdown(List<ServiceAreaModel>? serviceAreas) {
+    final isLoading = serviceAreas == null;
+    final cities = isLoading ? <String>[] : _activeCities(serviceAreas);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: DropdownButtonFormField<String>(
+        value: _dropdownValue(cityController.text, cities),
+        isExpanded: true,
+        decoration: inputDecoration.copyWith(
+          labelText: "City",
+          hintText: isLoading ? "Loading cities" : "Select City",
+        ),
+        items: cities
+            .map(
+              (city) => DropdownMenuItem(
+                value: city,
+                child: Text(city),
+              ),
+            )
+            .toList(),
+        onChanged: isLoading || cities.isEmpty
+            ? null
+            : (value) {
+                if (value == null) return;
+
+                setState(() {
+                  cityController.text = value;
+                  areaController.clear();
+                  address!.city = value;
+                  address!.areaName = "";
+                });
+              },
+      ),
+    );
+  }
+
+  Widget _buildAreaDropdown(List<ServiceAreaModel>? serviceAreas) {
+    final isLoading = serviceAreas == null;
+    final areas =
+        isLoading ? <String>[] : _activeAreasForSelectedCity(serviceAreas);
+    final city = cityController.text.trim();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: DropdownButtonFormField<String>(
+        value: _dropdownValue(areaController.text, areas),
+        isExpanded: true,
+        decoration: inputDecoration.copyWith(
+          labelText: "Area Name",
+          hintText: city.isEmpty ? "Select city first" : "Select Area",
+        ),
+        items: areas
+            .map(
+              (area) => DropdownMenuItem(
+                value: area,
+                child: Text(area),
+              ),
+            )
+            .toList(),
+        onChanged: isLoading || city.isEmpty || areas.isEmpty
+            ? null
+            : (value) {
+                if (value == null) return;
+
+                setState(() {
+                  areaController.text = value;
+                  address!.areaName = value;
+                });
+              },
+      ),
+    );
+  }
+
+  Widget _buildServiceAreaStatus(
+    AsyncValue<List<ServiceAreaModel>> serviceAreasState,
+  ) {
+    final city = cityController.text.trim();
+    final area = areaController.text.trim();
+
+    if (city.isEmpty || area.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final serviceAreas = serviceAreasState.valueOrNull;
+    if (serviceAreas == null) {
+      return _buildAreaStatusBanner(
+        icon: Icons.schedule_outlined,
+        message: 'Checking service availability...',
+        color: Colors.grey,
+      );
+    }
+
+    final isServiceable =
+        ServiceAreaModel.isServiceableArea(serviceAreas, city, area);
+
+    return _buildAreaStatusBanner(
+      icon: isServiceable ? Icons.check_circle_outline : Icons.block_outlined,
+      message: isServiceable
+          ? 'Service is available in $area, $city'
+          : 'Service is not available in $area, $city',
+      color: isServiceable ? Colors.green : Colors.red,
+    );
+  }
+
+  Widget _buildAreaStatusBanner({
+    required IconData icon,
+    required String message,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -421,7 +652,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -720,6 +951,7 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
   @override
   Widget build(BuildContext context) {
     final servicesAsync = ref.watch(maidServiceProvider);
+    final serviceAreasState = ref.watch(serviceAreaProvider);
     final customers = ref.read(customerProvider);
     final slots = ref.watch(slotProvider);
     final List<ServiceModel> services = servicesAsync;
@@ -827,7 +1059,9 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                               landmarkController.text = "";
                               cityController.text = "";
                               pinCodeController.text = "";
-                              stateController.text = "";
+                              stateController.text = AddressModel.defaultState;
+                              countryController.text =
+                                  AddressModel.defaultCountry;
                             });
                             return [];
                           }
@@ -857,8 +1091,10 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
                             landmarkController.text = customer.address.landmark;
                             cityController.text = customer.address.city;
                             pinCodeController.text = customer.address.pinCode;
-                            stateController.text = customer.address.state;
-                            countryController.text = customer.address.country;
+                            stateController.text =
+                                _defaultStateIfEmpty(customer.address.state);
+                            countryController.text = _defaultCountryIfEmpty(
+                                customer.address.country);
                             address = AddressModel(
                               houseNumber: houseController.text.trim(),
                               areaName: areaController.text.trim(),
@@ -1025,9 +1261,10 @@ class _NewBookingPageState extends ConsumerState<NewBookingPage> {
               content: Column(
                 children: [
                   _buildTextField(houseController, "House / Building No."),
-                  _buildTextField(areaController, "Area Name"),
+                  _buildCityDropdown(serviceAreasState.valueOrNull),
+                  _buildAreaDropdown(serviceAreasState.valueOrNull),
                   _buildTextField(landmarkController, "Landmark"),
-                  _buildTextField(cityController, "City"),
+                  _buildServiceAreaStatus(serviceAreasState),
                   _buildTextField(pinCodeController, "Pin Code",
                       inputType: TextInputType.number),
                   _buildTextField(stateController, "State"),
